@@ -1,0 +1,55 @@
+### New Variables added
+- language of interview/ native language
+- hectares of agricultural land
+- number of cattle owned
+- salt contains iodine
+- bmi
+- water is present at handwashing place
+- time to get to water source
+- anything done to water to make safe to drink
+- how respondent thinks malaria is contracted
+- hemoglobin level
+- religion
+- ethnicity
+- # trips in last 12 months
+- think that child needs to be beaten
+- decides_health_care
+- decides_purchases
+- HIV_witchcraft
+
+# Sons and daughters died
+Currently; 1, if both a son and a daughter has died. Shouls it not be 1, 
+if either one of them has died?
+
+### Variables deleted
+- trad_religion: This was specific for Benin - does not make sense for other countries
+
+# LOGIT Confusion Matrix and Statistics: Country dummies included
+
+          Reference
+Prediction      0      1
+         0 215197  13514
+         1   3843  16156
+                                          
+               Accuracy : 0.9302          
+            Sensitivity : 0.54452         
+            Specificity : 0.98246    
+
+# Bugs in model training
+LASSO selection of optimal lambda: error metric was MSE instead of classification error
+--> makes a big difference for model selection
+
+
+# LASSO training
+Results differ from simple logit model; different variable importances -> check again!
+Modify how results are being printed
+
+## Ideas for prediction
+- Try various techniques of data imputation (knn, missing value prediciton (splines), etc)
+- Apply polynomial logit model with LASSO --< check out caret
+- Apply more sophisticated oversampling method (bootstrapping or KNN)
+- Include region dummies
+- Find ways how to make RF estimation faster: maybe mtry=13 is too high
+- Play around with train/test split sizes
+- Integrate time-trackers in code
+

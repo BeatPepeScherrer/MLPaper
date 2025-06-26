@@ -1,0 +1,84 @@
+Find infos on: https://scicomp.ethz.ch/wiki/Getting_started_with_clusters
+
+0.) Initialize connection:
+Setup: MobaXterm:
+Open MobaXterm as Administrator (get spadmin from ETH IT) and open "Session". Go on "SSH". 
+Type for Remote host: "euler.ethz.ch". 
+Specify username: ethzusername. 
+Port you can leave as it is.
+At "bookmark settings" you can define at "session name" the name of the session. 
+Type your password. You get an email and type the access code.
+With mac:
+Open terminal. Type: ssh ethzusername@euler.ethz.ch. Type your password. You get an email and type the access code. Type yes to exit
+
+Setup filezilla:
+Open filezilla. Go to "open site manager". Go to folder "My sites". Click on "new server". Give the server a name. 
+On "General" select for "protocol": "SFTP - SSH File Transfer Protocol" and for "Host": "euler.ethz.ch". 
+"Connectiontype": "ask for password". You can leave Port empty.  
+
+
+1.) Open filezilla and connect with the server which you created before under "open site manager"
+2.) Load files in folder in filezilla which will be used under home/ethzusername
+3.) Open mobaxterm and connect with euler: Doubleclick on euler.ethz.ch and then sign in with your credentials
+4.) If you need R, packages need to be installed first. For this, load the program first:
+- module spider r/4.4.0
+- module load gcc/12.2.0
+- module load r/4.4.0
+- R (--> check if R works)rR
+5.) Install packages on R
+- install.packages(c("..."))
+- type yes when it asks to create a new directory for the R packages.
+- q() to leave R environment
+
+checks:
+ls --help (Overview of options)
+module avail (Overview of all programs)
+module spider r (Overview of R versions installed) 
+module avail r (ÜOverview of R versions available)
+module load r/ (and then click twice tab, to show all available R sessions) 
+lquota (shows used RAM)
+
+Should you not have the newest version of the programms, you are probably in an old version of the system. To switch to the new one type the following:
+see here: https://scicomp.ethz.ch/wiki/New_SPACK_software_stack_on_Euler
+module --version (shows version of sytem to check)
+module load eth_proxy (switches to system to the eth proxy server)
+
+Run scripts:
+- cd test_euler (puts current directory to the folder test_euler)
+- chmod u+x euler_script_matlab.sh (loads the example sh file to make it executable)
+- ls -a (see all files in the current directory)
+- ls -l (see all files in the current directory as a list to see which files are executable: rwxr anstatt rw-r mus stehen)
+- ./euler_script_matlab.sh (runs the script)
+-squeue -l (shows running jobs)
+- myjobs -j JobID (shows the status of the jobs)
+-scancel jobID (deletes running job)
+Same with R:
+- cd test_euler
+- chmod u+x euler_script_R.sh
+- ls -a
+- ls -l
+- ./euler_script_R.sh
+- squeue -l if you see rwxr, it is good, x stands for executable)
+- myjobs -j JobID
+
+Euler rules:
+- maximum 48 cores on the same to per user usable
+- maximum 120 GB RAM on the same to per user usable
+- maximum runtime needs to be define. Depending on the time your job will be put on a different server with different priority.
+Levels are: ... 24h, 120h, 15d. 15 days in sh file: 15-00:00:00 24 hours: 24:00:00 , 10 minute<s: 00:10:00 etc.
+
+If it shows the error: "/bin/bash^M: bad interpreter: No such file or directory" then:
+- nano xxx.sh (opens in a texteditor, xxx.sh is the name of the file you want to open)
+- then copy the code from the original file in the new file without the first line "#!/bin/bash"
+- then write the first line by hand in the new file "#!/bin/bash"
+- then ctrl + o and enter, to save the new file
+- then ctrl + x and enter, to close the file
+- chmod u+x xxx.sh (make the file executable)
+- ./xxx.sh (run the file)
+
+If the error still occurs, try:
+- sed -i -e 's/\r$//' xxx.sh
+- ./xxx.sh (run the file)
+
+# Specifically for the R-package "sf", you Need run the following commands in your terminal:
+"module load stack/2024-06 r/4.4.0 cmake/3.27.7 udunits/2.2.28 openssl/3.1.3-zhfub4o gdal/3.4.3 geos/3.9.1 proj/9.2.1 sqlite/3.43.2"

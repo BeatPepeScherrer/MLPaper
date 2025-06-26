@@ -1,0 +1,2 @@
+;average_insurance;average_insurance_logit;average_insurance_lasso;average_insurance_rf;average_insurance_nnet;average_insurance_xgboost;insurance_base
+4;0.025;0.137;0.142;0.043;0.133;0.019;0.000

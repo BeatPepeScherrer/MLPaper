@@ -1,0 +1,20 @@
+;logit_general_insurance;logit_insurance_cv;lasso_insurance_cv;rf_insurance_cv;nnet_insurance_cv;xgboost_insurance_cv
+Accuracy;0.97;0.92;0.93;0.97;0.90;0.97
+Kappa;0.00;0.20;0.19;0.16;0.16;0.19
+AccuracyLower;0.97;0.92;0.92;0.97;0.89;0.96
+AccuracyUpper;0.97;0.93;0.93;0.98;0.90;0.97
+AccuracyNull;0.97;0.97;0.97;0.97;0.97;0.97
+AccuracyPValue;0.51;1.00;1.00;0.80;1.00;1.00
+McnemarPValue;0.00;0.00;0.00;0.00;0.00;0.00
+Sensitivity;0.00;0.46;0.42;0.10;0.50;0.17
+Specificity;1.00;0.93;0.94;1.00;0.91;0.99
+Pos Pred Value;NA;0.15;0.15;0.42;0.12;0.27
+Neg Pred Value;0.97;0.99;0.98;0.98;0.99;0.98
+Precision;NA;0.15;0.15;0.42;0.12;0.27
+Recall;0.00;0.46;0.42;0.10;0.50;0.17
+F1;NA;0.23;0.22;0.17;0.20;0.21
+Prevalence;0.027;0.025;0.025;0.025;0.025;0.025
+Detection Rate;0.000;0.011;0.011;0.003;0.012;0.004
+Detection Prevalence;0.000;0.075;0.069;0.006;0.102;0.016
+Balanced Accuracy;0.50;0.70;0.68;0.55;0.70;0.58
+;;;;;;
