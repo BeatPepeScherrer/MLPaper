@@ -318,7 +318,7 @@ write.xlsx(average_performance_df_long_total, paste0("Tables_Figures/average_per
 # VII. Correlation Plot ----
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for (outcome_var in outcome_vars) {
-  do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
-}
+# for (outcome_var in outcome_vars) {
+#   do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
+# }
 
