@@ -18,13 +18,13 @@ library(dplyr)
 library(openxlsx)
 
 # Source helper scripts
-source("L:/research_assistants/Pepe/MLPaper/Dofiles/dhs_functions.R")
+source("Dofiles/dhs_functions.R")
 
 # Define key variables
-path_boxplots <- "L:/research_assistants/Pepe/MLPaper/Boxplots/data"
-path_importance <- "L:/research_assistants/Pepe/MLPaper/varimp_plots/data"
-path_boxplots_short <- "L:/research_assistants/Pepe/MLPaper/short_model/Boxplots/data"
-path_importance_short <- "L:/research_assistants/Pepe/MLPaper/short_model/varimp_plots/data"
+path_boxplots <- "Boxplots/data"
+path_importance <- "varimp_plots/data"
+path_boxplots_short <- "short_model/Boxplots/data"
+path_importance_short <- "short_model/varimp_plots/data"
 
 outcome_vars <- c("insurance","locationBirth","postnatalcheck", "visitHF12m")
 
@@ -40,7 +40,7 @@ importance_df_merged <- NA
 models <- c("importance_subset", "importance_general", "importance_xgboost")
 
 # # Compute sample average of proportion insured
-# files <- list.files("L:/research_assistants/Pepe/MLPaper/New_data_sets/insurance", pattern = ".RData$", full.names = TRUE)
+# files <- list.files("New_data_sets/insurance", pattern = ".RData$", full.names = TRUE)
 # # Read all files and combine them into a single data frame
 # for (country in 1:length(countries)) {
 #   set <- as.data.frame(get(load(files[[country]]))[["insurance"]])
@@ -59,10 +59,10 @@ models <- c("importance_subset", "importance_general", "importance_xgboost")
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# CALL THE FUNCTION: 
-for (outcome_var in outcome_vars) {
-  do.call(create_boxplots, list(outcome_var = outcome_var, short_model = FALSE))
-}
+# # CALL THE FUNCTION: 
+# for (outcome_var in outcome_vars) {
+#   do.call(create_boxplots, list(outcome_var = outcome_var, short_model = FALSE))
+# }
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -70,14 +70,14 @@ for (outcome_var in outcome_vars) {
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# CALL FUNCTION: Create variable importance plots
-for (outcome_var in outcome_vars) {
-  for (model in c("importance_general", "importance_xgboost")) {
-    for (rank in c(FALSE)) {
-      do.call(create_importance_plot, list(path = path_importance, model = model, rank = rank, outcome_var = outcome_var, short_model = FALSE))
-    }
-  }
-}
+# # CALL FUNCTION: Create variable importance plots
+# for (outcome_var in outcome_vars) {
+#   for (model in c("importance_general", "importance_xgboost")) {
+#     for (rank in c(FALSE)) {
+#       do.call(create_importance_plot, list(path = path_importance, model = model, rank = rank, outcome_var = outcome_var, short_model = FALSE))
+#     }
+#   }
+# }
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -85,12 +85,12 @@ for (outcome_var in outcome_vars) {
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# CALL THE FUNCTION:
-for (metric in c("Kappa", "Sensitivity", "Specificity", "Accuracy")) {
-  for (outcome_var in outcome_vars) {
-    do.call(create_scatterplots, list(outcome_var = outcome_var, metric = metric, short_model = FALSE))
-  }
-}
+# # CALL THE FUNCTION:
+# for (metric in c("Kappa", "Sensitivity", "Specificity", "Accuracy")) {
+#   for (outcome_var in outcome_vars) {
+#     do.call(create_scatterplots, list(outcome_var = outcome_var, metric = metric, short_model = FALSE))
+#   }
+# }
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -159,7 +159,7 @@ for (country in countries) {
 #     }
 #   }
 #   coef_sign_df_merged$prop <- rowSums(coef_sign_df_merged[,-1])/(ncol(coef_sign_df_merged)-1)
-#   write.xlsx(coef_sign_df_merged, paste0("L:/research_assistants/Pepe/MLPaper/coef_signs/coef_signs_",outcome_var,".xlsx"))
+#   write.xlsx(coef_sign_df_merged, paste0("coef_signs/coef_signs_",outcome_var,".xlsx"))
 #   coef_sign_df_merged <- NULL
 # }
 

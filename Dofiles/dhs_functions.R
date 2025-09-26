@@ -116,7 +116,7 @@ run_countries <- function(country, country_code, IR_path, MR_path, PR_path, outc
   # Define empty df
   df <- data.frame(matrix(nrow = nrow(data),ncol = 0))
   # Define geo data path
-  geo_path <- list.files(path = "L:/research_assistants/Pepe/MLPaper/Data/Geolocation/", pattern = paste0(".*",country_code,"GE.*_data.*"), full.names = TRUE)
+  geo_path <- list.files(path = "Data/Geolocation/", pattern = paste0(".*",country_code,"GE.*_data.*"), full.names = TRUE)
   
   # 2.1. Create and add new variables, general recoding and special cases ----
   # Add hv001
@@ -1401,9 +1401,9 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
       imp_plot <- imp_plot + scale_fill_grey(start = 0.5, end = 0.75)
     }
     if (short_model == TRUE) {
-      saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/short_model/Varimp_plots/variable_plot_",model,"_",outcome_var,"_short.png"),plot = imp_plot, width = 8, height = 5, dpi = 1000)
+      saved_plot <- ggsave(paste0("short_model/Varimp_plots/variable_plot_",model,"_",outcome_var,"_short.png"),plot = imp_plot, width = 8, height = 5, dpi = 1000)
     } else {
-      saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/Varimp_plots/variable_plot_",model,"_",outcome_var,".png"),plot = imp_plot, width = 8, height = 5, dpi = 1000)
+      saved_plot <- ggsave(paste0("Varimp_plots/variable_plot_",model,"_",outcome_var,".png"),plot = imp_plot, width = 8, height = 5, dpi = 1000)
     }
     cli::cli_alert_info("Creating importance plots for outcome {outcome_var} and model {model} DONE")
     return(saved_plot)
@@ -1425,9 +1425,9 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
       # Conditionally remove legend
       guides(fill = "none")
     if (short_model == TRUE) {
-      saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/short_model/Varimp_plots/variable_rank_plot_",model,"_",outcome_var,"_short.png"),plot = imp_plot_rank, width = 8, height = 5, dpi = 1000)
+      saved_plot <- ggsave(paste0("short_model/Varimp_plots/variable_rank_plot_",model,"_",outcome_var,"_short.png"),plot = imp_plot_rank, width = 8, height = 5, dpi = 1000)
     } else {
-      saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/Varimp_plots/variable_rank_plot_",model,"_",outcome_var,".png"),plot = imp_plot_rank, width = 8, height = 5, dpi = 1000)
+      saved_plot <- ggsave(paste0("Varimp_plots/variable_rank_plot_",model,"_",outcome_var,".png"),plot = imp_plot_rank, width = 8, height = 5, dpi = 1000)
     }
     cli::cli_alert_info("Creating importance plots for outcome {outcome_var} and model {model} DONE")
     return(saved_plot)
@@ -1506,9 +1506,9 @@ create_boxplots <- function(outcome_var, short_model = FALSE) {
   
   # Export boxplot to png
   if (short_model == TRUE) {
-    saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/short_model/Boxplots/boxplots_2_models_",outcome_var,"_short.png"), plot = boxplot, width = 7, height = 5, dpi = 1000)
+    saved_plot <- ggsave(paste0("short_model/Boxplots/boxplots_2_models_",outcome_var,"_short.png"), plot = boxplot, width = 7, height = 5, dpi = 1000)
   } else {
-    saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/Boxplots/boxplots_3_models_",outcome_var,".png"), plot = boxplot, width = 7, height = 5, dpi = 1000)
+    saved_plot <- ggsave(paste0("Boxplots/boxplots_3_models_",outcome_var,".png"), plot = boxplot, width = 7, height = 5, dpi = 1000)
   }
   cli::cli_alert_info("Creating boxplots for outcome {outcome_var} DONE")
   return(saved_plot)
@@ -1592,9 +1592,9 @@ create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
   
   # Export scatterplot to png
   if (short_model == TRUE) {
-    saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/short_model/Scatterplots/scatter_2_models_",outcome_var,"_",metric,"_short.png"), plot = scatterplot, width = 7, height = 5, dpi = 500)
+    saved_plot <- ggsave(paste0("short_model/Scatterplots/scatter_2_models_",outcome_var,"_",metric,"_short.png"), plot = scatterplot, width = 7, height = 5, dpi = 500)
   } else {
-    saved_plot <- ggsave(paste0("L:/research_assistants/Pepe/MLPaper/Scatterplots/scatter_2_models_",outcome_var,"_",metric,".png"), plot = scatterplot, width = 7, height = 5, dpi = 500)
+    saved_plot <- ggsave(paste0("Scatterplots/scatter_2_models_",outcome_var,"_",metric,".png"), plot = scatterplot, width = 7, height = 5, dpi = 500)
   }
   cli::cli_alert_info("Creating scatterplot for outcome {outcome_var} and metric {metric} DONE.")
   return(saved_plot)
@@ -1618,7 +1618,7 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
     # Read all files and combine them into a single data frame
     importance <- as.data.frame(lapply(file, read_excel))
     # drop all negative dummy cols
-    importance <- importance %>% dplyr::select(c(variables, importance_xgboost))
+    importance <- importance %>% dplyr::select(c(variables, shap_importance))
     colnames(importance) <- c("variables", paste0("XGBoost_",country))
     if (length(merged_importance) <= 1) {
       merged_importance <- importance
@@ -1637,9 +1637,9 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
   
   # Write to excel
   if (short_model == TRUE) {
-    write.xlsx(merged_importance, paste0("L:/research_assistants/Pepe/MLPaper/short_model/merged_importance_",outcome_var,".xlsx"))
+    write.xlsx(merged_importance, paste0("short_model/merged_importance_",outcome_var,".xlsx"))
   } else {
-    write.xlsx(merged_importance, paste0("L:/research_assistants/Pepe/MLPaper/merged_importance_",outcome_var,".xlsx"))
+    write.xlsx(merged_importance, paste0("merged_importance_",outcome_var,".xlsx"))
   }
 }
 
@@ -1647,9 +1647,9 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
 create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
   # Create a full dataset with all countries
   if (short_model == FALSE) {
-    input_path <- paste0("L:/research_assistants/Pepe/MLPaper/New_data_sets/", outcome_var,"/")
+    input_path <- paste0("New_data_sets/", outcome_var,"/")
   } else {
-    input_path <- paste0("L:/research_assistants/Pepe/MLPaper/short_model/final_data/", outcome_var, "/")
+    input_path <- paste0("short_model/final_data/", outcome_var, "/")
   }
   
   # Initialize an empty list to store data frames

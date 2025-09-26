@@ -1,6 +1,6 @@
 # Master Script for Running All Analyses ----
 
-setwd("L:/research_assistants/Pepe/MLPaper")
+# setwd("L:/research_assistants/Pepe/MLPaper")
 
 # 1. Dependencies ----
 
@@ -30,8 +30,8 @@ source("Dofiles/dhs_functions.R")
 # # 5. Prepare census data set ----
 # source("Dofiles/census_merging.R")
 # 
-# # 6. Create some of the Figures and Tables in the paper ----
-# source("Dofiles/figures_tables.R")
+# 6. Create some of the Figures and Tables in the paper ----
+source("Dofiles/figures_tables.R")
 
-# 7. Create Maps with out-of-sample predictions, regional- and district-level ----
-source("Dofiles/short_model_mapping.R")
+# # 7. Create Maps with out-of-sample predictions, regional- and district-level ----
+# source("Dofiles/short_model_mapping.R")
