@@ -1641,6 +1641,29 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
   } else {
     write.xlsx(merged_importance, paste0("merged_importance_",outcome_var,".xlsx"))
   }
+  
+  # create variable rank table for Figue 2 in Paper
+  merged_importance_rank <- merged_importance
+  for (col in 2:ncol(merged_importance_rank)) {
+      merged_importance_rank <- merged_importance_rank %>% dplyr::arrange(desc(merged_importance_rank[,col]))
+      merged_importance_rank[,col] <- 1:nrow(merged_importance_rank)
+  }
+  merged_importance_rank <- merged_importance_rank %>%
+    filter(if_any(everything(), ~ .x < 6))
+  
+  merged_importance_rank$count1 <- rowSums(merged_importance_rank == 1)
+  merged_importance_rank$count2 <- rowSums(merged_importance_rank == 2)
+  merged_importance_rank$count3 <- rowSums(merged_importance_rank == 3)
+  merged_importance_rank$count4 <- rowSums(merged_importance_rank == 4)
+  merged_importance_rank$count5 <- rowSums(merged_importance_rank == 5)
+  
+
+  # Write to excel
+  if (short_model == TRUE) {
+    write.xlsx(merged_importance_rank, paste0("short_model/merged_importance_rank_",outcome_var,".xlsx"))
+  } else {
+    write.xlsx(merged_importance_rank, paste0("merged_importance_rank_",outcome_var,".xlsx"))
+  }
 }
 
 # Function to create correlation plots, one for whole inputted set and another for only top correlated ones
