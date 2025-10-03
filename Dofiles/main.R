@@ -15,7 +15,7 @@ p_load(Hmisc, ROSE, caret, ROCR,
        haven, cli, readxl, writexl, openxlsx,
        fastDummies, purrr, naniar, stats, tidyr,
        ggplot2, eeptools, ggspatial, labelled,
-       sf, broom, ggcorrplot
+       sf, broom, ggcorrplot, viridisLite, rlang
 )
 
 # 2.  Load Custom Functions ----

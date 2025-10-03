@@ -1816,9 +1816,7 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     shp <- mADM
     shp <- sf::st_as_sf(shp)
     shp <- shp %>% dplyr::filter(NAME_0 == country_for_filter)
-    
     shp <- st_make_valid(shp)
-    
     shp <- shp %>%
       dplyr::mutate(id = row_number())
     
@@ -1828,17 +1826,8 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       next
     }
     
-    # Extract all boundary points while keeping the feature ID
-    shp_df <- shp %>%  # Create a unique ID for each feature
-      st_cast("MULTIPOINT") %>%  # Ensure polygons are expanded
-      st_coordinates() %>%
-      as.data.frame() %>%
-      rename(long = X, lat = Y, id = L1) %>%
-      left_join(shp, by = "id")  # Reattach attribute
-    
     mADMdata_filtered <- mADMdata %>% dplyr::filter(NAME_0 == country_for_filter)
     data <- st_intersection(df, mADMdata_filtered)
-    
     
     ## %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # 1. Create country maps of average outcomes of xgboost predictions with census data, district level ----
@@ -1928,8 +1917,46 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
         Census_xgboost_with_prediction <- merge(census, predict_xgboost_census, by="ID") 
         Census_xgboost_with_prediction[[outcome_var]] <- Census_xgboost_with_prediction$`1`
         
+        country_to_filter <- ifelse(country == "Burkina.Faso", "burkina_faso", 
+                                    ifelse(country == "The.Gambia", "gambia", 
+                                           ifelse(country == "DRC", "democratic_republic_of_the_congo",
+                                                  ifelse(country == "Sierra.Leone", "sierra_leone",
+                                                         ifelse(country == "South.Africa", "south_africa", 
+                                                                ifelse(country == "Cote.dIvoire", "cote_divoire", 
+                                                                       ifelse(country == "Republic.of.the.Congo", "republic_of_congo",
+                                                                              ifelse(country == "Eswatini", "swaziland", tolower(country)))))))))
+        
         # Save data file with prediction results
         save(Census_xgboost_with_prediction, file=paste0("Data/Census_xgboost_with_prediction_",country,"_",outcome_var,".RData"))
+        
+        # Prepare summary stats table for analysis of coverage
+        summary_stats_coverage <- Census_xgboost_with_prediction %>% dplyr::filter(NAME_0 == country_to_filter)
+        summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1_IPUMS, geolev2, all_of(outcome_var))
+        summary_stats_coverage$geolev2 <- as.factor(summary_stats_coverage$geolev2)
+        # Convert string to symbol for tidy evaluation
+        outcome_sym <- sym(outcome_var)
+        # Do the aggregation
+        summary_stats_coverage <- summary_stats_coverage %>%
+          group_by(geolev2) %>%
+          summarise(
+            country = first(NAME_0),
+            region = first(NAME_1_IPUMS),
+            mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+            min_coverage = min(!!outcome_sym, na.rm = TRUE),
+            max_coverage = max(!!outcome_sym, na.rm = TRUE),
+            sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          )
+        if (country == first(countries)) {
+          summary_stats_coverage_merged <- summary_stats_coverage
+        } else {
+          summary_stats_coverage_merged <- rbind(summary_stats_coverage_merged, summary_stats_coverage)
+        }
+        if (country == last(countries)) {
+          summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
+          write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
+        }
         
         #===
         # this part above should be included in short model generation in the same way as you do it for the DHS model
@@ -1947,16 +1974,9 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
           dplyr::mutate(id = row_number())
         shp <- st_make_valid(shp)
         
-        # Extract all boundary points while keeping the feature ID
-        shp_df <- shp %>%  # Create a unique ID for each feature
-          st_cast("MULTIPOINT") %>%  # Ensure polygons are expanded
-          st_coordinates() %>%
-          as.data.frame() %>%
-          rename(long = X, lat = Y, id = L1) %>%
-          left_join(shp, by = "id")  # Reattach attribute
-        
         ## merge shapefile with census data by district level
-        merged_df <- shp_df %>%
+        Census_xgboost_with_prediction <- Census_xgboost_with_prediction %>% st_drop_geometry()
+        merged_df <- shp %>%
           left_join(Census_xgboost_with_prediction, by="GEOLEVEL2")
         
         ## Map
@@ -1978,18 +1998,20 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
           max = 100
         }
         
-        map_insurance<-ggplot() + 
-          # Overlay with regional boundaries and fill 
-          geom_polygon(data = merged_df, aes(x = long, y = lat, group = ADMIN_NAME, fill=average_district_insurance), colour="transparent", size=0.02)+
+        map_insurance <- ggplot(data = merged_df) + 
+          geom_sf(aes(fill = average_district_insurance), 
+                  colour = "transparent", size = 0.02) +
           annotation_north_arrow(location = "tl", which_north = "true", style = north_arrow_fancy_orienteering) +
-          annotation_scale(location = "br") + coord_sf(crs = 4326) +
-          scale_fill_gradient(
-            low = "firebrick3",
-            high = "gold1",
-            na.value = "white",
+          annotation_scale(location = "br") +
+          coord_sf(crs = 4326) +
+          scale_fill_viridis_c(
+            option = "D",
+            na.value = "grey",  # NA color is grey
             guide = "colourbar",
-            aesthetics = "fill",
-            limits = c(min, max)
+            limits = c(min,max),
+            direction = 1,
+            aesthetics = "fill",  # Set scale range from 0 to 100
+            oob = scales::squish  # Values outside the range are squished to the nearest limit
           ) +
           labs(y="Latitude", x = "Longtitude", fill="Percentage (%)") +
           # ggtitle(paste0("Predicted ",outcome_var," Census ",cap_first(country)))+
@@ -2007,6 +2029,39 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     
     if (map_type == "all" | map_type == "predicted_dhs_region_short") {
       cli::cli_alert_info("Creating Predicted {outcome_var} Coverage DHS map for {country} on region level...")
+
+      # Prepare summary stats table for analysis of coverage
+      summary_stats_coverage <- data %>% dplyr::filter(NAME_0.1 == country_for_filter)
+      summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1, NAME_2, predicted_class)
+      summary_stats_coverage$NAME_2 <- as.factor(summary_stats_coverage$NAME_2)
+      # Do the aggregation
+      summary_stats_coverage <- summary_stats_coverage %>%
+        group_by(NAME_2) %>%
+        summarise(
+          country = first(NAME_0),
+          region_2 = first(NAME_1),
+          mean_coverage = mean(predicted_class, na.rm = TRUE),
+          min_coverage = min(predicted_class, na.rm = TRUE),
+          max_coverage = max(predicted_class, na.rm = TRUE),
+          sd_coverage = sd(predicted_class, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        )
+      
+      cli::cli_alert_info("test_before_write.xlsx")
+      
+      if (country == first(countries)) {
+        summary_stats_coverage_merged <- summary_stats_coverage
+      } else {
+        summary_stats_coverage_merged <- rbind(summary_stats_coverage_merged, summary_stats_coverage)
+      }
+      if (country == last(countries)) {
+        summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
+        write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
+      }
+      
+      cli::cli_alert_info("test_after_write.xlsx")
+
       ## create region averages
       data$average_insurance_region <- ave(as.numeric(data$predicted_class), data$GID_1, FUN= function(x) mean(x, na.rm = TRUE))
       summary(data$average_insurance_region)
@@ -2015,7 +2070,8 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       data_region <- data_region[,c("average_insurance_region", "GID_1")]
       
       ## Merge data and shapefile
-      data_region<-shp_df %>%
+      data_region <- data_region %>% st_drop_geometry()
+      data_region<-shp %>%
         dplyr::left_join(data_region, by="GID_1")
       
       ## Map INSURANCE
@@ -2037,19 +2093,19 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
         max = 100
       }
       
-      map_insurance <- ggplot() + 
-        geom_polygon(data = data_region, aes(x = long, y = lat, group = NAME_2, fill = average_insurance_region), 
-                     colour = "transparent", size = 0.02) +
+      map_insurance <- ggplot(data = data_region) + 
+        geom_sf(aes(fill = average_insurance_region), 
+                colour = "transparent", size = 0.02) +
         annotation_north_arrow(location = "tl", which_north = "true", style = north_arrow_fancy_orienteering) +
-        annotation_scale(location = "br") + 
+        annotation_scale(location = "br") +
         coord_sf(crs = 4326) +
-        scale_fill_gradient(
-          low = "firebrick3",
-          high = "gold1",
+        scale_fill_viridis_c(
+          option = "D",
           na.value = "grey",  # NA color is grey
           guide = "colourbar",
+          limits = c(min,max),
+          direction = 1,
           aesthetics = "fill",  # Set scale range from 0 to 100
-          limits = c(min, max),
           oob = scales::squish  # Values outside the range are squished to the nearest limit
         ) +
         labs(y = "Latitude", x = "Longitude", fill = "Percentage (%)") +
@@ -2068,6 +2124,34 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     
     if (map_type == "all" | map_type == "predicted_dhs_region_long") {
       cli::cli_alert_info("Creating Predicted {outcome_var} Coverage DHS map for {country} on region level...")
+
+      # Prepare summary stats table for analysis of coverage
+      summary_stats_coverage <- data %>% dplyr::filter(NAME_0.1 == country_for_filter)
+      summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1, NAME_2, predicted_class)
+      summary_stats_coverage$NAME_2 <- as.factor(summary_stats_coverage$NAME_2)
+      # Do the aggregation
+      summary_stats_coverage <- summary_stats_coverage %>%
+        group_by(NAME_2) %>%
+        summarise(
+          country = first(NAME_0),
+          region_2 = first(NAME_1),
+          mean_coverage = mean(predicted_class, na.rm = TRUE),
+          min_coverage = min(predicted_class, na.rm = TRUE),
+          max_coverage = max(predicted_class, na.rm = TRUE),
+          sd_coverage = sd(predicted_class, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        )
+      if (country == first(countries)) {
+        summary_stats_coverage_merged <- summary_stats_coverage
+      } else {
+        summary_stats_coverage_merged <- rbind(summary_stats_coverage_merged, summary_stats_coverage)
+      }
+      if (country == last(countries)) {
+        summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
+        write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
+      }
+
       ## create region averages
       data$average_insurance_region <- ave(as.numeric(data$predicted_class), data$GID_1, FUN= function(x) mean(x, na.rm = TRUE))
       summary(data$average_insurance_region)
@@ -2076,7 +2160,8 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       data_region <- data_region[,c("average_insurance_region", "GID_1")]
       
       ## Merge data and shapefile
-      data_region<-shp_df %>%
+      data_region <- data_region %>% st_drop_geometry()
+      data_region<-shp %>%
         dplyr::left_join(data_region, by="GID_1")
       
       # Set limits manually
@@ -2098,18 +2183,18 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       }
       
       ## Map INSURANCE
-      map_insurance <- ggplot() + 
-        geom_polygon(data = data_region, aes(x = long, y = lat, group = NAME_2, fill = average_insurance_region), 
-                     colour = "transparent", size = 0.02) +
+      map_insurance <- ggplot(data = data_region) + 
+        geom_sf(aes(fill = average_insurance_region), 
+                colour = "transparent", size = 0.02) +
         annotation_north_arrow(location = "tl", which_north = "true", style = north_arrow_fancy_orienteering) +
-        annotation_scale(location = "br") + 
+        annotation_scale(location = "br") +
         coord_sf(crs = 4326) +
-        scale_fill_gradient(
-          low = "firebrick3",
-          high = "gold1",
+        scale_fill_viridis_c(
+          option = "D",
           na.value = "grey",  # NA color is grey
           guide = "colourbar",
           limits = c(min,max),
+          direction = 1,
           aesthetics = "fill",  # Set scale range from 0 to 100
           oob = scales::squish  # Values outside the range are squished to the nearest limit
         ) +
@@ -2129,6 +2214,36 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     
     if (map_type == "all" | map_type == "average_dhs_region") {
       cli::cli_alert_info("Creating Average {outcome_var} Coverage DHS map for {country} on regional level...")
+
+      # Prepare summary stats table for analysis of coverage
+      summary_stats_coverage <- data %>% dplyr::filter(NAME_0.1 == country_for_filter)
+      summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0.1, NAME_1, NAME_2, all_of(outcome_var))
+      summary_stats_coverage$NAME_2 <- as.factor(summary_stats_coverage$NAME_2)
+      # Do the aggregation
+      outcome_sym <- sym(outcome_var)
+      summary_stats_coverage <- summary_stats_coverage %>%
+        group_by(NAME_2) %>%
+        summarise(
+          country = first(NAME_0.1),
+          region = first(NAME_1),
+          mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+          min_coverage = min(!!outcome_sym, na.rm = TRUE),
+          max_coverage = max(!!outcome_sym, na.rm = TRUE),
+          sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        )
+      summary_stats_coverage <- summary_stats_coverage %>% st_drop_geometry()
+      if (country == first(countries)) {
+        summary_stats_coverage_merged <- summary_stats_coverage
+      } else {
+        summary_stats_coverage_merged <- rbind(summary_stats_coverage_merged, summary_stats_coverage)
+      }
+      if (country == last(countries)) {
+        summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
+        write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
+      }
+
       ## create region averages
       data$average_insurance_region <- ave(as.numeric(data[[outcome_var]]), data$GID_1, FUN= function(x) mean(x, na.rm = TRUE))
       summary(data$average_insurance_region)
@@ -2137,7 +2252,8 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       data_region <- data_region[,c("average_insurance_region", "GID_1")]
       
       ## Merge data and shapefile
-      data_region<-shp_df%>%
+      data_region <- data_region %>% st_drop_geometry()
+      data_region<-shp %>% 
         left_join(data_region, by="GID_1")
       
       # Set limits manually
@@ -2158,19 +2274,18 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
         max = 100
       }
       
-      ## Map INSURANCE
-      map_insurance <- ggplot() + 
-        geom_polygon(data = data_region, aes(x = long, y = lat, group = NAME_2, fill = average_insurance_region), 
-                     colour = "transparent", size = 0.02) +
+      map_insurance <- ggplot(data = data_region) + 
+        geom_sf(aes(fill = average_insurance_region), 
+                colour = "transparent", size = 0.02) +
         annotation_north_arrow(location = "tl", which_north = "true", style = north_arrow_fancy_orienteering) +
-        annotation_scale(location = "br") + 
+        annotation_scale(location = "br") +
         coord_sf(crs = 4326) +
-        scale_fill_gradient(
-          low = "firebrick3",
-          high = "gold1",
+        scale_fill_viridis_c(
+          option = "D",
           na.value = "grey",  # NA color is grey
           guide = "colourbar",
           limits = c(min,max),
+          direction = 1,
           aesthetics = "fill",  # Set scale range from 0 to 100
           oob = scales::squish  # Values outside the range are squished to the nearest limit
         ) +

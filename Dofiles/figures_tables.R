@@ -59,10 +59,10 @@ models <- c("importance_subset", "importance_general", "importance_xgboost")
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# # CALL THE FUNCTION: 
-# for (outcome_var in outcome_vars) {
-#   do.call(create_boxplots, list(outcome_var = outcome_var, short_model = FALSE))
-# }
+# CALL THE FUNCTION: 
+for (outcome_var in outcome_vars) {
+  do.call(create_boxplots, list(outcome_var = outcome_var, short_model = FALSE))
+}
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -70,14 +70,14 @@ models <- c("importance_subset", "importance_general", "importance_xgboost")
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# # CALL FUNCTION: Create variable importance plots
-# for (outcome_var in outcome_vars) {
-#   for (model in c("importance_general", "importance_xgboost")) {
-#     for (rank in c(FALSE)) {
-#       do.call(create_importance_plot, list(path = path_importance, model = model, rank = rank, outcome_var = outcome_var, short_model = FALSE))
-#     }
-#   }
-# }
+# CALL FUNCTION: Create variable importance plots
+for (outcome_var in outcome_vars) {
+  for (model in c("importance_general", "importance_xgboost")) {
+    for (rank in c(FALSE)) {
+      do.call(create_importance_plot, list(path = path_importance, model = model, rank = rank, outcome_var = outcome_var, short_model = FALSE))
+    }
+  }
+}
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -85,12 +85,12 @@ models <- c("importance_subset", "importance_general", "importance_xgboost")
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# # CALL THE FUNCTION:
-# for (metric in c("Kappa", "Sensitivity", "Specificity", "Accuracy")) {
-#   for (outcome_var in outcome_vars) {
-#     do.call(create_scatterplots, list(outcome_var = outcome_var, metric = metric, short_model = FALSE))
-#   }
-# }
+# CALL THE FUNCTION:
+for (metric in c("Kappa", "Sensitivity", "Specificity", "Accuracy")) {
+  for (outcome_var in outcome_vars) {
+    do.call(create_scatterplots, list(outcome_var = outcome_var, metric = metric, short_model = FALSE))
+  }
+}
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
@@ -318,7 +318,8 @@ write.xlsx(average_performance_df_long_total, paste0("Tables_Figures/average_per
 # VII. Correlation Plot ----
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# for (outcome_var in outcome_vars) {
-#   do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
-# }
+for (outcome_var in outcome_vars) {
+  do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
+}
+
 
