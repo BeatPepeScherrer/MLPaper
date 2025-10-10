@@ -580,7 +580,12 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
   test_dummy_x._insurance <<- data.matrix(x_test) # Removes outcome_var
   
   # Define repeated CV
-  train_control <- trainControl(method="repeatedcv", number=5, repeats=3, savePredictions="final")
+  train_control <- 
+    trainControl(method="repeatedcv",
+                 number=5,
+                 repeats=20,
+                savePredictions="final")  
+
   cli::cli_alert_info("Prepare Data for Train and Test for country: {country}. DONE")
   
   # Create df to store variable importances
@@ -966,44 +971,51 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     
     set.seed(1)
     # Define grid
-    tune_grid <- expand.grid(nrounds=c(300, 500), # number of trees, default is 100
-                             max_depth = c(2,3,4,5,6), # maximum tree depth, default is 6
-                             eta = c(0.02, 0.05, 0.1), #learning rate, default is 0.3
-                             gamma = c(0.01), # Used for tuning of Regularization, default: 0
-                             colsample_bytree = c(0.75), # Column sampling, default: 1
-                             subsample = c(0.50), # Row sampling, default: 1
-                             min_child_weight = c(0)) #  Minimum leaf weight, default: 1
+    tune_space <- expand.grid(
+      nrounds = c(200, 400, 800),
+      max_depth = c(4, 5, 6),
+      eta = c(0.03, 0.06, 0.1),
+      gamma = c(0, 0.05, 0.1),
+      colsample_bytree = c(0.6, 0.8, 1.0),
+      subsample = c(0.6, 0.8, 1.0),
+      min_child_weight = c(0, 1, 3)
+    )                      
+    
+    n_samples <- 25
+    tune_grid <- tune_space[sample(nrow(tune_space), n_samples), ]
+    
+    y_fac <- factor(train_dummy_y._insurance, levels = c(0,1))
+    
+    cli::cli_alert_info("test1")
     
     # Track time
     start_time <- Sys.time()
     
-    # # Start tuning the model
+    #Tune hyperparameters
     xgb_tune <- caret::train(
       x = train_dummy_x._insurance,
       y = as.factor(train_dummy_y._insurance),
       trControl = train_control,
       tuneGrid = tune_grid,
       method = "xgbTree",
-      verbose = TRUE,
-      verbosity = 0
+      metric = "Accuracy",
+      verbose = FALSE
     )
+    xgb_tune$bestTune
     
-    # Final grid
-    final_grid <- expand.grid(nrounds = xgb_tune$bestTune$nrounds, # number of trees, default is 100
-                              max_depth = xgb_tune$bestTune$max_depth, # maximum tree depth, default is 6
-                              eta = xgb_tune$bestTune$eta, #learning rate, default is 0.3
-                              gamma = c(0.01), # Used for tuning of Regularization, default: 0
-                              colsample_bytree = c(0.75), # Column sampling, default: 1
-                              subsample = c(0.50), # Row sampling, default: 1
-                              min_child_weight = c(0)) #  Minimum leaf weight, default: 1
+    cli::cli_alert_info("Test2")
     
-    # Run final model
-    xgboost_insurance_cv <- caret::train(form = formula_model,
-                                         data = train_insurance,
-                                         trControl = train_control,
-                                         tuneGrid = final_grid,
-                                         method = "xgbTree",
-                                         verbose = TRUE
+    final_grid <- xgb_tune$bestTune
+    
+    # Run XGBoost model with tuned Hyperparameters
+    xgboost_insurance_cv <- caret::train(
+      form = formula_model,
+      data = train_insurance,
+      trControl = train_control,
+      tuneGrid = final_grid,
+      method = "xgbTree",
+      metric = "Accuracy",
+      verbose = FALSE
     )
     
     # End time
@@ -1028,7 +1040,11 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     names(importance_xgboost) <- "importance_xgboost"
     importance_xgboost$variables <- rownames(importance_xgboost)
     # get shapley values
-    shap_values <- xgb.plot.shap(data = as.matrix(train_insurance[,-1]), features = colnames(train_insurance)[-1], model = xgboost_insurance_cv$finalModel, top_n = NULL, plot = FALSE)
+    shap_values <- xgb.plot.shap(data = as.matrix(train_insurance[,-1]),
+                                 features = colnames(train_insurance)[-1],
+                                 model = xgboost_insurance_cv$finalModel,
+                                 top_n = NULL,
+                                 plot = FALSE)    
     shap_importance <- colMeans(abs(shap_values$shap_contrib))
     shap_importance <- sort(shap_importance, decreasing = TRUE)
     shap_importance <- as.data.frame(shap_importance)
@@ -2241,7 +2257,7 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
       }
       if (country == last(countries)) {
         summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
-        write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
+        write.xlsx(summary_stats_coverage_merged, paste0("Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
       }
 
       ## create region averages
