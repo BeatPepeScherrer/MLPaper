@@ -1618,6 +1618,7 @@ create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
 
 # Function to create variable importance data table
 create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
+    cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var}...")
   merged_importance <- NA
   importance_path <- paste0("Varimp_plots/data_",outcome_var)
   importance_path_short <- paste0("short_model/Varimp_plots/data_",outcome_var)
@@ -1680,10 +1681,12 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
   } else {
     write.xlsx(merged_importance_rank, paste0("merged_importance_rank_",outcome_var,".xlsx"))
   }
+    cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var} DONE!")
 }
 
 # Function to create correlation plots, one for whole inputted set and another for only top correlated ones
 create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
+    cli::cli_alert_info("Creating correlation plot for outcome {outcome_var}...")
   # Create a full dataset with all countries
   if (short_model == FALSE) {
     input_path <- paste0("New_data_sets/", outcome_var,"/")
@@ -1771,6 +1774,7 @@ create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
     # Extra: Save pooled df to newdatasets
     save(country_df_merged, file = paste0("short_model/final_data/", outcome_var, "/df_final_",outcome_var,"_all_short.RData"))    
   }
+  cli::cli_alert_info("Creating correlation plot for outcome {outcome_var} DONE!")
 }
 
 # Create function to make the out-of-sample predictions and create district- and region-level maps
@@ -1944,35 +1948,6 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
         
         # Save data file with prediction results
         save(Census_xgboost_with_prediction, file=paste0("Data/Census_xgboost_with_prediction_",country,"_",outcome_var,".RData"))
-        
-        # Prepare summary stats table for analysis of coverage
-        summary_stats_coverage <- Census_xgboost_with_prediction %>% dplyr::filter(NAME_0 == country_to_filter)
-        summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1_IPUMS, geolev2, all_of(outcome_var))
-        summary_stats_coverage$geolev2 <- as.factor(summary_stats_coverage$geolev2)
-        # Convert string to symbol for tidy evaluation
-        outcome_sym <- sym(outcome_var)
-        # Do the aggregation
-        summary_stats_coverage <- summary_stats_coverage %>%
-          group_by(geolev2) %>%
-          summarise(
-            country = first(NAME_0),
-            region = first(NAME_1_IPUMS),
-            mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
-            min_coverage = min(!!outcome_sym, na.rm = TRUE),
-            max_coverage = max(!!outcome_sym, na.rm = TRUE),
-            sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
-            n = n(),
-            .groups = "drop"
-          )
-        if (country == first(countries)) {
-          summary_stats_coverage_merged <- summary_stats_coverage
-        } else {
-          summary_stats_coverage_merged <- rbind(summary_stats_coverage_merged, summary_stats_coverage)
-        }
-        if (country == last(countries)) {
-          summary_stats_coverage_merged <- st_drop_geometry(summary_stats_coverage_merged)
-          write.xlsx(summary_stats_coverage_merged, paste0("L:/research_assistants/Pepe/MLPaper/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_",outcome_var,".xlsx"))
-        }
         
         #===
         # this part above should be included in short model generation in the same way as you do it for the DHS model
@@ -2314,6 +2289,197 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     }
   }
 }
+
+# Function for creating summary stats table
+# Prepare summary stats table for analysis of coverage
+create_summary_stats <- function(outcome_var = outcome_var, map_type = map_type) {
+  cli::cli_alert_info("creating summary stats table for outcome {outcome_var} and map type {map_type}...")
+  # current working directory
+  wd <- getwd()
+  # join with a relative path
+  ipums_p <- file.path(wd, "DataRaw", "IPUMS")
+  # gadm_p <- file.path(wd, "DataRaw", "GADM", "mADM.rds")
+  file_names <- list.files(path = ipums_p, full.names = TRUE)
+  # read in GADM data
+  mADM<- readRDS(file = paste0(wd, "/DataRaw/GADM/mADM.rds"))
+  mADMdata <- st_as_sf(mADM) %>% st_transform(4269)
+  country_list <- list(
+    Burkina.Faso = list(country = "Burkina.Faso", country_code = "BF"),
+    Benin = list(country = "Benin", country_code = "BJ"),
+    Burundi = list(country = "Burundi", country_code = "BU"),
+    Cameroon = list(country = "Cameroon", country_code = "CM"),
+    DRC = list(country = "DRC", country_code = "CD"),
+    Republic.of.the.Congo = list(country = "Republic.of.the.Congo", country_code = "CIG"),
+    Cote.dIvoire = list(country = "Cote.dIvoire", country_code = "CI"),
+    Eswatini = list(country = "Eswatini", country_code = "SZ"),
+    Ethiopia = list(country = "Ethiopia", country_code = "ET"),
+    The.Gambia = list(country = "The.Gambia", country_code = "GM"),
+    Ghana = list(country = "Ghana", country_code = "GH"),
+    Guinea = list(country = "Guinea", country_code = "GN"),
+    Kenya = list(country = "Kenya", country_code = "KE"),
+    Comoros = list(country = "Comoros", country_code = "KM"),
+    Liberia = list(country = "Liberia", country_code = "LB"),
+    Lesotho = list(country = "Lesotho", country_code = "LS"),
+    Madagascar = list(country = "Madagascar", country_code = "MD"),
+    Mauritania = list(country = "Mauritania", country_code = "MR"),
+    Mali = list(country = "Mali", country_code = "ML"),
+    Malawi = list(country = "Malawi", country_code = "MW"),
+    Nigeria = list(country = "Nigeria", country_code = "NG"),
+    Niger = list(country = "Niger", country_code = "NI"),
+    Namibia = list(country = "Namibia", country_code = "NM"),
+    Rwanda = list(country = "Rwanda", country_code = "RW"),
+    Sao.Tome = list(country = "Sao.Tome", country_code = "ST"),
+    South.Africa = list(country = "South.Africa", country_code = "ZA"),
+    Sierra.Leone = list(country = "Sierra.Leone", country_code = "SL"),
+    Senegal = list(country = "Senegal", country_code = "SN"),
+    Chad = list(country = "Chad", country_code = "TD"),
+    Togo = list(country = "Togo", country_code = "TG"),
+    Tanzania = list(country = "Tanzania", country_code = "TZ"),
+    Uganda = list(country = "Uganda", country_code = "UG"),
+    Zambia = list(country = "Zambia", country_code = "ZM"),
+    Zimbabwe = list(country = "Zimbabwe", country_code = "ZW")
+  )
+  countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+                 "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
+                 "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
+                 "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
+                 "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+  for (country in countries) {
+    country_for_filter <- ifelse(country == "Burkina.Faso", "Burkina Faso", 
+                                  ifelse(country == "The.Gambia", "Gambia", 
+                                        ifelse(country == "DRC", "Democratic Republic of the Congo",
+                                                ifelse(country == "Sierra.Leone", "Sierra Leone",
+                                                      ifelse(country == "South.Africa", "South Africa", 
+                                                              ifelse(country == "Cote.dIvoire", "Côte d'Ivoire", 
+                                                                    ifelse(country == "Republic.of.the.Congo", "Republic of Congo",
+                                                                            ifelse(country == "Eswatini", "Swaziland", country))))))))
+                                                                            country_for_filter_census <- ifelse(country == "Burkina.Faso", "burkina_faso", 
+                                    ifelse(country == "The.Gambia", "gambia", 
+                                            ifelse(country == "DRC", "democratic_republic_of_the_congo",
+                                                  ifelse(country == "Sierra.Leone", "sierra_leone",
+                                                          ifelse(country == "South.Africa", "south_africa", 
+                                                                ifelse(country == "Cote.dIvoire", "cote_divoire", 
+                                                                        ifelse(country == "Republic.of.the.Congo", "republic_of_congo",
+                                                                              ifelse(country == "Eswatini", "swaziland", tolower(country)))))))))
+    geo_path <- list.files(path = "Data/Geolocation/", pattern = paste0(".*",country_list[[country]][["country_code"]],"GE.*_data.*"), full.names = TRUE)
+    ipums_path <- list.files(path = "DataRaw/IPUMS/", pattern = paste0("_*",tolower(country_list[[country]][["country_code"]])), full.names = TRUE)
+    # Read in geo data
+    if (is_empty(geo_path)) {
+      cli::cli_alert_info("Skipping, no geodata found for {country}.")
+      next  
+    }
+    df_geolocation <- read_dta(geo_path)
+    
+    file_names <- list.files(path = "DataRaw/IPUMS/", full.names = TRUE)
+    pattern <- tolower(country_list[[country]][["country_code"]])
+    # Skip country if there does not exist geospatial data for it
+    if (map_type == "predicted_census_district" & !any(grepl(pattern, file_names))) {
+      cli::cli_alert_danger("Skipping for country {country}, no geodata (ipums) found")
+      next
+    }
+  
+    # Read in short data set
+    if (map_type == "predicted_dhs_region_long") {
+      load(paste0("final_data/",outcome_var,"/df_final_",outcome_var,"_",country,".RData"))
+    } else {
+      load(paste0("short_model/final_data/",outcome_var,"/df_final_",outcome_var,"_",country,"_short.RData"))
+    }
+    
+    # Drop insurance if it is not outcome
+    if (outcome_var != "insurance" & "insurance" %in% colnames(df_final)) {
+      df_final <- df_final %>% dplyr::select(-c(insurance))
+    }
+    #change naming for census matching
+    colnames(df_final)[colnames(df_final) == "currently_working"] <- "working"
+    colnames(df_final)[colnames(df_final) == "sondaughterhome"] <- "kidsathome"
+    
+    # Add geolocation to the DHS data
+    df_geolocation$hv001 <- df_geolocation$DHSCLUST
+    df_geolocation <- df_geolocation[,c("hv001", "LATNUM", "LONGNUM")]
+    
+    # Create final data
+    df <- merge(df_final, df_geolocation, by = c("hv001"), all=TRUE)
+    # Convert to sf objects
+    df <- st_as_sf(df, coords = c("LONGNUM", "LATNUM"), crs = 4269)
+    
+    ## Load world_geolev2 shapefile (not available for Botswana)
+    shp <- mADM
+    shp <- sf::st_as_sf(shp)
+    shp <- shp %>% dplyr::filter(NAME_0 == country_for_filter)
+    shp <- st_make_valid(shp)
+    shp <- shp %>%
+      dplyr::mutate(id = row_number())
+    
+    # overlay DHS and mADM for each country separately - otherwise it crashes
+    if (!(country_for_filter %in% mADMdata$NAME_0)) {
+      cli::cli_alert_danger("Skipping for country {country}, no madmdata found")
+      next
+    }
+    
+    mADMdata_filtered <- mADMdata %>% dplyr::filter(NAME_0 == country_for_filter)
+    data <- st_intersection(df, mADMdata_filtered)
+    wd
+    census_xgboost_p <- paste0(wd, "/Data/Census_xgboost_with_prediction_",country,"_",outcome_var,".RData")
+    
+    if (map_type == "predicted_census_district") {
+      load(census_xgboost_p)
+      summary_data <- Census_xgboost_with_prediction
+      summary_stats_coverage <- summary_data %>% dplyr::filter(NAME_0 == country_for_filter_census)
+    } else {
+      summary_stats_coverage <- data %>% dplyr::filter(NAME_0 == country_for_filter)
+    }
+    summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1_IPUMS, geolev1, geolev2, all_of(outcome_var))
+    summary_stats_coverage$geolev2 <- as.factor(summary_stats_coverage$geolev2)
+    # Convert string to symbol for tidy evaluation
+    outcome_sym <- sym(outcome_var)
+    # Do the aggregation by distric
+    summary_stats_coverage_district <- summary_stats_coverage %>%
+          group_by(geolev2) %>%
+          summarise(
+            geolev1 = first(geolev1),
+            country = first(NAME_0),
+            region = first(NAME_1_IPUMS),
+            mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+            min_coverage = min(!!outcome_sym, na.rm = TRUE),
+            max_coverage = max(!!outcome_sym, na.rm = TRUE),
+            sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          )
+    # Do the aggregation by region
+    summary_stats_coverage_region <- summary_stats_coverage %>%
+      group_by(geolev1) %>%
+      summarise(
+        country = first(NAME_0),
+        region = first(NAME_1_IPUMS),
+        mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+        min_coverage = min(!!outcome_sym, na.rm = TRUE),
+        max_coverage = max(!!outcome_sym, na.rm = TRUE),
+        sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+        n = n(),
+        .groups = "drop"
+      )
+    
+    if (country == first(countries)) {
+      summary_stats_coverage_district_merged <- summary_stats_coverage_district
+      summary_stats_coverage_region_merged <- summary_stats_coverage_region
+      
+    } else {
+      summary_stats_coverage_district_merged <- rbind(summary_stats_coverage_district_merged, summary_stats_coverage_district)
+      summary_stats_coverage_region_merged <- rbind(summary_stats_coverage_region_merged, summary_stats_coverage_region)
+    }
+    if (country == last(countries)) {
+      summary_stats_coverage_district_merged <- st_drop_geometry(summary_stats_coverage_district_merged)
+      summary_stats_coverage_region_merged <- st_drop_geometry(summary_stats_coverage_region_merged)
+      
+      # write summary stats table
+      write.xlsx(summary_stats_coverage_district_merged, paste0(wd, "/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_district_",outcome_var,".xlsx"))
+      write.xlsx(summary_stats_coverage_region_merged, paste0(wd, "/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_region_",outcome_var,".xlsx"))
+        }
+  }
+  cli::cli_alert_info("creating summary stats table for outcome {outcome_var} and map type {map_type} DONE!")
+}
+
 
 # 6. General / Functions for Census merging ----
 # Function that scraps all the accents

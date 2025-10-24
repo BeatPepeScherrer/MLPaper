@@ -322,4 +322,17 @@ for (outcome_var in outcome_vars) {
   do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
 }
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# VIII. Summary stats Tables ----
+#
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+map_types <- c("predicted_census_district", "predicted_dhs_region_long", "predicted_dhs_region_short", "average_dhs_region")
+outcome_vars <- c("insurance", "locationBirth", "postnatalcheck", "visitHF12m")
+for (map_type in map_types) {
+  for (outcome_var in outcome_vars) {
+    do.call(create_summary_stats, list(outcome_var = outcome_var, map_type = map_type))
+  }
+}
+
 
