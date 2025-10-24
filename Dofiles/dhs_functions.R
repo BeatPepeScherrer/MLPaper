@@ -1891,31 +1891,55 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
         train_insurance <- df_final[train_ind_insurance, ]
         test_insurance <- df_final[-train_ind_insurance, ]
         
-        ## model
-        set.seed(1)
-        tune_grid <- expand.grid(nrounds=c(100,200,300,400), max_depth = c(3:7),
-                                 eta = c(0.05, 1),
-                                 gamma = c(0.01),
-                                 colsample_bytree = c(0.75),
-                                 subsample = c(0.50),
-                                 min_child_weight = c(0))
-        
-        # set parameters for models
-        train_control <- trainControl(method="repeatedcv", number=5, repeats=5, savePredictions="final")
-        
-        # Run final model
         formula_str <- sprintf("as.factor(%s) ~ .", outcome_var)
         formula_model <- as.formula(formula_str)
         # Drop vars with less than 2 levels
         train_insurance <- train_insurance %>%
           select_if(~ length(unique(.)) >= 2)
+ 
+        ## model
+        # set parameters for models
+        train_control <- trainControl(method="repeatedcv", number = 5, repeats = 20, savePredictions="final")
+
+        tune_space <- expand.grid(
+        nrounds = c(200, 400, 800),
+        max_depth = c(4, 5, 6),
+        eta = c(0.03, 0.06, 0.1),
+        gamma = c(0, 0.05, 0.1),
+        colsample_bytree = c(0.6, 0.8, 1.0),
+        subsample = c(0.6, 0.8, 1.0),
+        min_child_weight = c(0, 1, 3))                      
+    
+        n_samples <- 25
+        tune_grid <- tune_space[sample(nrow(tune_space), n_samples), ]
+                        
+        # Track time
+        start_time <- Sys.time()
+        
+        #Tune hyperparameters
+        xgb_tune <- caret::train(
+          form = formula_model,
+          data = train_insurance,
+          trControl = train_control,
+          tuneGrid = tune_grid,
+          method = "xgbTree",
+          metric = "Accuracy",
+          verbose = FALSE
+        )
+        xgb_tune$bestTune
+        
+        final_grid <- xgb_tune$bestTune
+        
+        # Run final model
         cli::cli_alert_info("Training XGBoost...")
+
         xgboost_insurance_cv <- caret::train(form = formula_model,
                                              data = train_insurance,
                                              trControl = train_control,
-                                             tuneGrid = tune_grid,
+                                             tuneGrid = final_grid,
                                              method = "xgbTree",
-                                             tuneLength = 10
+                                             metric = "Accuracy",
+                                             verbose = FALSE
         )
         cli::cli_alert_info("Training XGBoost DONE.")
         
