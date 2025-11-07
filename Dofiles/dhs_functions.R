@@ -1534,7 +1534,7 @@ create_boxplots <- function(outcome_var, short_model = FALSE) {
 create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
   cli::cli_alert_info("Creating scatterplot for outcome {outcome_var} and metric {metric}...")
   country_codes_countries <- list(country_codes = c("BJ","BF","BU","TD","CM","CD","CIG", "CI","SZ","ET","GM",
-                                                    "GH","GN","KE","LS","LB","MD","MW","ML","MR","NM","NI","NG", 
+                                                    "GH","GN","KE","LS","LB","MD","MW","ML","MR","NA","NI","NG", 
                                                     "RW","SN","SL","TZ","TG","UG","ZM","ZW"),
                                   countries = countries)
   
@@ -1780,16 +1780,25 @@ create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
 # Create function to make the out-of-sample predictions and create district- and region-level maps
 make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = "all") {
   file_names <- list.files(path = "DataRaw/IPUMS/", full.names = TRUE)
-  countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
-                 "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
-                 "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
-                 "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
-                 "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+  # countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+  #                "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
+  #                "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
+  #                "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
+  #                "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+  countries <- c("Lesotho", "South.Africa")
   # 0. SETUP -----
-  # read in GADM data
+  # read in GADM data for Lesotho
+  mADM_ls <- vect("DataRaw/GADM/gadm41_LSO_1_pk.rds")
+  mADM_ls_df <- as.data.frame(mADM_ls)
+  mADM_ls_df <- mADM_ls_df %>% dplyr::select(c(GID_0, GID_1, COUNTRY, NAME_1))
+  mADM_ls_df <- mADM_ls_df %>% rename(NAME_0 = "COUNTRY")
+  
+  # read in madm data for the rest of the countries
   mADM<- readRDS(file = "DataRaw/GADM/mADM.rds")
   mADMdata <- st_as_sf(mADM) %>% st_transform(4269)
-  
+  # merge lesotho and the rest
+  mADMdata <- dplyr::bind_rows(mADMdata, mADM_ls_df)  
+
   for (country in countries) {
     country_for_filter <- ifelse(country == "Burkina.Faso", "Burkina Faso", 
                                  ifelse(country == "The.Gambia", "Gambia", 
@@ -2449,9 +2458,6 @@ create_summary_stats <- function(outcome_var = outcome_var, map_type = map_type)
       load(census_xgboost_p)
       summary_data <- Census_xgboost_with_prediction
       summary_stats_coverage <- summary_data %>% dplyr::filter(NAME_0 == country_for_filter_census)
-    } else {
-      summary_stats_coverage <- data %>% dplyr::filter(NAME_0 == country_for_filter)
-    }
     summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1_IPUMS, geolev1, geolev2, all_of(outcome_var))
     summary_stats_coverage$geolev2 <- as.factor(summary_stats_coverage$geolev2)
     # Convert string to symbol for tidy evaluation
@@ -2483,6 +2489,41 @@ create_summary_stats <- function(outcome_var = outcome_var, map_type = map_type)
         n = n(),
         .groups = "drop"
       )
+        } else {
+      summary_stats_coverage <- data %>% dplyr::filter(NAME_0 == country_for_filter)
+      summary_stats_coverage <- summary_stats_coverage %>% dplyr::select(NAME_0, NAME_1, NAME_2, GID_1, GID_2, all_of(outcome_var))
+      summary_stats_coverage$GID_1 <- as.factor(summary_stats_coverage$GID_1)
+      # Convert string to symbol for tidy evaluation
+      outcome_sym <- sym(outcome_var)
+      # Do the aggregation by distric
+      summary_stats_coverage_district <- summary_stats_coverage %>%
+        group_by(GID_2) %>%
+        summarise(
+          NAME_1 = first(NAME_1),
+          country = first(NAME_0),
+          region = first(NAME_2),
+          mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+          min_coverage = min(!!outcome_sym, na.rm = TRUE),
+          max_coverage = max(!!outcome_sym, na.rm = TRUE),
+          sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        )
+      # Do the aggregation by region
+      summary_stats_coverage_region <- summary_stats_coverage %>%
+        group_by(NAME_1) %>%
+        summarise(
+          country = first(NAME_0),
+          region = first(NAME_1),
+          mean_coverage = mean(!!outcome_sym, na.rm = TRUE),
+          min_coverage = min(!!outcome_sym, na.rm = TRUE),
+          max_coverage = max(!!outcome_sym, na.rm = TRUE),
+          sd_coverage = sd(!!outcome_sym, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        )
+    }
+
     
     if (country == first(countries)) {
       summary_stats_coverage_district_merged <- summary_stats_coverage_district
