@@ -1089,6 +1089,13 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
       dplyr::select(any_of(vars), contains("age_cat"), contains("education"), 
                     contains("wealthindex"), contains("age_HH_head_cat"))
     
+    set.seed(1)   # set the seed to make it reproducible
+    smp_size_insurance <- floor(0.66 * nrow(df_prediction_subset)) # use 1/3 and 2/3 split
+    train_ind_insurance <- sample(seq_len(nrow(df_prediction_subset)), size = smp_size_insurance)
+    test_insurance_subset <- df_prediction_subset[-train_ind_insurance,]
+    train_insurance_subset <<- df_prediction_subset[train_ind_insurance,]
+
+
     model_name <- "basic_subset"
     cli::cli_alert_info("Train Model: {model_name}")
     
@@ -1096,7 +1103,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     start_time <- Sys.time()
     
     # Train Logit model
-    logit_subset_insurance  <- glm(formula = formula_model, data=df_prediction_subset, family="binomial")
+    logit_subset_insurance  <- glm(formula = formula_model, data=train_insurance_subset, family="binomial")
     
     # End time
     end_time <- Sys.time()
@@ -1105,15 +1112,15 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     elapsed_time <- difftime(end_time, start_time, units = "secs")
     
     # Produce performance metrics for later plotting
-    predict_subset_insurance <- predict(logit_subset_insurance, df_prediction_subset)
-    Perf_subset_insurance <- ROCR::prediction(as.numeric(predict_subset_insurance), as.numeric(df_prediction_subset[[outcome_var]]))
+    predict_subset_insurance <- predict(logit_subset_insurance, test_insurance_subset)
+    Perf_subset_insurance <- ROCR::prediction(as.numeric(predict_subset_insurance), as.numeric(test_insurance_subset[[outcome_var]]))
     AUC_subset_insurance <- performance(Perf_subset_insurance , "auc") 
     ROC_subset_insurance <- performance(Perf_subset_insurance, "tpr", "fpr")
     RP_subset_insurance <- performance(Perf_subset_insurance, "prec","rec")
     
     # Create confusion matrix
     pred_dummy <-  ifelse(predict_subset_insurance> 0.5 , 1,0) 
-    cm_subset_insurance <- confusionMatrix(as.factor(pred_dummy),as.factor(df_prediction_subset[[outcome_var]]), positive = "1") 
+    cm_subset_insurance <- confusionMatrix(as.factor(pred_dummy),as.factor(test_insurance_subset[[outcome_var]]), positive = "1") 
     
     # Create df with most important performance metrics
     metrics_subset1 <- as.data.frame(cm_subset_insurance$overall)
@@ -1180,11 +1187,21 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     
     cli::cli_alert_info("Writing output for Model: {model_list}, Country: {country} DONE.")
     
+    # Create folder for predicted test probabilities if it does not exist and save predicted test probabilities
+    df_final_test_probs <- test_insurance
+    df_final_test_probs$test_prediction_xgboost <- predict_xgboost_insurance_cv[[2]]
+    df_final_test_probs$test_prediction_subset <- predict_subset_insurance
+    if (short_model == TRUE) {
+      save(df_final_test_probs, file = paste0("short_model/test_probabilities/",outcome_var,"/test_probabilities_",country,"_short.RData"))
+    } else {
+      save(df_final_test_probs, file = paste0("test_probabilities/",outcome_var,"/test_probabilities_",country,".RData"))
+    }
+    
     # Calculate predicted probs, append to df and save df as final_df
     df_final <- df_insurance
-    predict_xgboost_insurance_cv <- predict(xgboost_insurance_cv, df_prediction, type="prob")
-    Perf_xgboost_insurance_cv <- prediction(as.numeric(predict_xgboost_insurance_cv[[2]]), as.numeric(df_prediction[[1]]))
-    pred_dummy <-  ifelse(predict_xgboost_insurance_cv[[2]]> 0.5 , 1,0)
+    predict_xgboost_insurance_cv_full <- predict(xgboost_insurance_cv, df_prediction, type="prob")
+    Perf_xgboost_insurance_cv <- prediction(as.numeric(predict_xgboost_insurance_cv_full[[2]]), as.numeric(df_prediction[[1]]))
+    pred_dummy <-  ifelse(predict_xgboost_insurance_cv_full[[2]]> 0.5 , 1,0)
     df_final$predicted_class <- pred_dummy
     df_final$NAME_0 <- country
     if (short_model == TRUE) {
@@ -1286,7 +1303,7 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
   importance_df_merged <- importance_df_merged %>%
     mutate(variables = recode(variables,
                               "member_all_HH" = "Number of HH members",
-                              "member_child_under_5" = "Number of HH members under 5",
+                              # "member_child_under_5" = "Number of HH members under 5",
                               "member_women_HH" = "Number of women in HH",
                               "read_newspaper" = "Never read newspapers",
                               "education_HH_tertiary_edu" = "HH Education: Tertiary education",
@@ -1334,16 +1351,25 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
   }
   
   importance_df_merged <- importance_df_merged %>%
-    mutate(variables = ifelse(variables %in% importance_df_sub$variables | variables %in% c("Wealthindex: 5th Quintile", "Education: Tertiary education", 
-                                                                                            "age_cat_45_49", "age_cat_50_54", "age_cat_55_59", "age_cat_59",
-                                                                                            "age_HH_head_cat_0_14", "age_HH_head_cat_59", "education_HH_tertiary_edu",
-                                                                                            "age_cat_0_14"),
+    mutate(variables = ifelse(variables %in% c("Wealthindex: 1st Quintile", "Wealthindex: 2nd Quintile", "Wealthindex: 3rd Quintile",
+                                                "Wealthindex: 4th Quintile", "Wealthindex: 5th Quintile", "Education: Primary education",
+                                                "Education: Secondary education","Education: Tertiary education","Education: No education", 
+                                                "HH Education: No education", "HH Education: Primary education", "HH Education: Secondary education",
+                                                "HH Education: Tertiary education", "rural", "married", "currently working", "smokes",
+                                                "Exposure to mass media", "female HH head",
+                                                "Age: 15-24","Age: 25-29","Age: 30-34","Age: 35-39","Age: 40-44", "age_cat_45_49", "age_cat_50_54",
+                                                "age_cat_55_59", "age_cat_59", "Age HH head: 25-29", "Age HH head: 30-34", "Age HH head: 35-39",
+                                                "Age HH head: 40-44", "Age HH head: 45-49", "Age HH head: 50-54", "Age HH head: 55-59",
+                                                "age_HH_head_cat_0_14", "age_HH_head_cat_59", "education_HH_tertiary_edu",
+                                                "age_cat_0_14", "age_HH_head_cat_0_14",  "age_cat_15_24"),
                               paste0(variables, "*"), variables))
   
   # General renaming
   importance_df_merged <- importance_df_merged %>%
     dplyr::mutate(variables = gsub("_", " ", variables))
   importance_df_merged$variables <- cap_first(importance_df_merged$variables)
+  
+  importance_df_merged <- importance_df_merged %>% dplyr::rename("shap_importance" = shap_importance.x)
   
   # Create separate dfs
   z_score <- qnorm(1 - 0.05 / 2)
@@ -1591,6 +1617,116 @@ create_boxplots <- function(outcome_var, short_model = FALSE) {
   return(saved_plot)
 }
 
+create_wealth_quintile_plots <- function(outcome_var = outcome_var, short_model = FALSE) {
+  library(psych)
+  countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+                 "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
+                 "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
+                 "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
+                 "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+  for (country in countries) {
+    load(paste0("test_probabilities/",outcome_var,"/test_probabilities","_",country,".RData"))
+    vars_to_keep <- c("insurance",
+                      "wealthindex_1_Quintile",
+                      "wealthindex_2_Quintile",
+                      "wealthindex_3_Quintile",
+                      "wealthindex_4_Quintile",
+                      "wealthindex_5_Quintile")
+    
+    df_full <- df_final_test_probs %>% dplyr::select(all_of(vars_to_keep), test_prediction_xgboost)
+    df_full$country <- country
+    df_subset <- df_final_test_probs %>% dplyr::select(all_of(vars_to_keep), test_prediction_subset)
+    df_subset$country <- country
+    
+    if (country == first(countries)) {
+      df_full_merged <- df_full
+      df_subset_merged <- df_subset
+    } else {
+      df_full_merged <- rbind(df_full_merged, df_full)
+      df_subset_merged <- rbind(df_subset_merged, df_subset)
+    }
+  }
+  # factorize predicted probs
+  df_full_merged$predicted_class <- ifelse(df_full_merged$test_prediction_xgboost > 0.5, 1, 0)
+  df_subset_merged$predicted_class <- ifelse(df_subset_merged$test_prediction_subset > 0.5, 1, 0)
+  
+  # Calculate accuracy and kappa for each wealth quintile
+  calculate_accuracy <- function(df, prediction_col) {
+    df %>%
+      mutate(correct = ifelse(predicted_class == insurance, 1, 0)) %>%
+      group_by(country, wealthindex_1_Quintile, wealthindex_2_Quintile, wealthindex_3_Quintile, wealthindex_4_Quintile, wealthindex_5_Quintile) %>%
+      summarise(accuracy = sum(correct) / n(), .groups = "drop")
+  }
+  
+  # Calculate Cohen's Kappa for each wealth quintile
+  calculate_kappa <- function(df) {
+    df %>%
+      group_by(country, wealthindex_1_Quintile, wealthindex_2_Quintile, wealthindex_3_Quintile, wealthindex_4_Quintile, wealthindex_5_Quintile) %>%
+      summarise(kappa = cohen.kappa(table(predicted_class, insurance))$kappa, .groups = "drop")
+  }
+  
+  # Calculate Cohen's Kappa for full and subset data
+  kappa_full <- calculate_kappa(df_full_merged)
+  kappa_subset <- calculate_kappa(df_subset_merged)
+  # Calculate accuracy for full and subset data
+  accuracy_full <- calculate_accuracy(df_full_merged, "test_prediction_xgboost")
+  accuracy_subset <- calculate_accuracy(df_subset_merged, "test_prediction_subset")
+  
+  # Combine the data for plotting
+  kappa_full$Type <- "Full"
+  kappa_subset$Type <- "Subset"
+  kappa_data <- bind_rows(kappa_full, kappa_subset)
+  # Combine the data for plotting
+  accuracy_full$Type <- "Full"
+  accuracy_subset$Type <- "Subset"
+  accuracy_data <- bind_rows(accuracy_full, accuracy_subset)
+  
+  # Reshape data for plotting
+  #accuracy
+  accuracy_data_long <- accuracy_data %>%
+    pivot_longer(cols = starts_with("wealthindex"), names_to = "Wealth_Quintile", values_to = "Quintile_Value") %>%
+    filter(Quintile_Value == 1) # Filter for the relevant wealth quintile
+  #kappa
+    kappa_data_long <- kappa_data %>%
+    pivot_longer(cols = starts_with("wealthindex"), names_to = "Wealth_Quintile", values_to = "Quintile_Value") %>%
+    filter(Quintile_Value == 1) # Filter for the relevant wealth quintile
+  
+  
+  # Create boxplot kappa
+  wealth_plot_kappa <- ggplot(kappa_data_long, aes(x = Wealth_Quintile, y = kappa, fill = Type)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.5) + # Boxplot without outliers
+    geom_jitter(width = 0.2, size = 2, show.legend = FALSE) + # Points for countries
+    labs(title = "Out-of-sample Cohen's Kappa by Wealth Quintile",
+         x = "Wealth Quintile",
+         y = "Cohen's Kappa",
+         fill = "Data Type",
+         color = "Country") +
+    theme_minimal()
+  
+  # Create boxplot accuracy
+  wealth_plot_accuracy <- ggplot(accuracy_data_long, aes(x = Wealth_Quintile, y = accuracy, fill = Type)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.5) + # Boxplot without outliers
+    geom_jitter(width = 0.2, size = 2, show.legend = FALSE) + # Points for countries
+    labs(title = "Out-of-sample Accuracy by Wealth Quintile",
+         x = "Wealth Quintile",
+         y = "Accuracy",
+         fill = "Data Type",
+         color = "Country") +
+    theme_minimal()
+    # Export wealth percentile plot to png
+    if (short_model == TRUE) {
+      saved_plot_kappa <- ggsave(paste0("short_model/Boxplots/wealth_quintile_plot_kappa",outcome_var,"_",country,"_short.png"), plot = wealth_plot_kappa, width = 7, height = 5, dpi = 500)
+      saved_plot_accuracy <- ggsave(paste0("short_model/Boxplots/wealth_quintile_plot_accuracy",outcome_var,"_",country,"_short.png"), plot = wealth_plot_accuracy, width = 7, height = 5, dpi = 500)
+
+    } else {
+      saved_plot_kappa <- ggsave(paste0("Boxplots/wealth_quintile_plot_kappa",outcome_var,"_",country,".png"), plot = wealth_plot_kappa, width = 7, height = 5, dpi = 500)
+      saved_plot_accuracy <- ggsave(paste0("Boxplots/wealth_quintile_plot_accuracy",outcome_var,"_",country,".png"), plot = wealth_plot_accuracy, width = 7, height = 5, dpi = 500)
+
+    }
+  cli::cli_alert_info("Creating wealth percentile plots for outcome {outcome_var} DONE.")
+  return(saved_plot_kappa)
+  return(saved_plot_accuracy)
+}
 
 create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
   cli::cli_alert_info("Creating scatterplot for outcome {outcome_var} and metric {metric}...")
@@ -1695,8 +1831,11 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
     }
     # Read all files and combine them into a single data frame
     importance <- as.data.frame(lapply(file, read_excel))
-    # drop all negative dummy cols
-    importance <- importance %>% dplyr::select(c(variables, shap_importance))
+    # select relevant columns
+    shap_col <- grep("shap_importance", names(importance), value = TRUE)[1]
+    if (is.na(shap_col)) stop('No column name contains "shap_importance".')
+    importance <- importance %>%
+      dplyr::select(variables, dplyr::all_of(shap_col))
     colnames(importance) <- c("variables", paste0("XGBoost_",country))
     if (length(merged_importance) <= 1) {
       merged_importance <- importance
