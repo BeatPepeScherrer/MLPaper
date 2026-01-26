@@ -34,7 +34,7 @@ country_list <- list(
   Malawi = list(country = "Malawi", country_code = "MW"),
   Nigeria = list(country = "Nigeria", country_code = "NG"),
   Niger = list(country = "Niger", country_code = "NI"),
-  Namibia = list(country = "Namibia", country_code = "NM"),
+  Namibia = list(country = "Namibia", country_code = "NA"),
   Rwanda = list(country = "Rwanda", country_code = "RW"),
   Sao.Tome = list(country = "Sao.Tome", country_code = "ST"),
   South.Africa = list(country = "South.Africa", country_code = "ZA"),
@@ -51,7 +51,7 @@ country_list <- list(
 outcome_vars <- c("insurance","locationBirth","postnatalcheck", "visitHF12m")
 
 # Source function script
-source("dofiles/dhs_functions.R")
+source("Dofiles/dhs_functions.R")
 
 # CALL THE FUNCTION
 map_types <- c("predicted_census_district", "predicted_dhs_region_long", "predicted_dhs_region_short", "average_dhs_region")
