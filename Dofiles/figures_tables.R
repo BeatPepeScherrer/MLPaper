@@ -37,7 +37,7 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
 performance_df_merged <- NA
 importance_df_merged <- NA
 
-models <- c("importance_subset", "importance_general", "importance_xgboost")
+models <- c("importance_subset", "importance_general", "shap_importance")
 
 # # Compute sample average of proportion insured
 # files <- list.files("New_data_sets/insurance", pattern = ".RData$", full.names = TRUE)
@@ -72,7 +72,7 @@ for (outcome_var in outcome_vars) {
 
 # CALL FUNCTION: Create variable importance plots
 for (outcome_var in outcome_vars) {
-  for (model in c("importance_general", "importance_xgboost")) {
+  for (model in c("shap_importance")) {
     for (rank in c(FALSE)) {
       do.call(create_importance_plot, list(path = path_importance, model = model, rank = rank, outcome_var = outcome_var, short_model = FALSE))
     }
@@ -117,10 +117,10 @@ for (country in countries) {
   # Read all files and combine them into a single data frame
   importance_rank_df <- as.data.frame(lapply(file, read_excel))
   # keep relevant cols only
-  importance_rank_df_gini <- importance_rank_df %>% dplyr::select(c(variables, importance_xgboost))
+  importance_rank_df_gini <- importance_rank_df %>% dplyr::select(c(variables, shap_importance))
   importance_rank_df_shap <- importance_rank_df %>% dplyr::select(c(variables, shap_importance))
   # sort and filter for top 5, create variable "rank"
-  importance_rank_df_gini <- importance_rank_df_gini %>% dplyr::arrange(desc(importance_xgboost))
+  importance_rank_df_gini <- importance_rank_df_gini %>% dplyr::arrange(desc(shap_importance))
   importance_rank_df_gini <- importance_rank_df_gini[1:5,]
   importance_rank_df_gini$rank <- 1:5
   importance_rank_df_gini$country <- country
@@ -171,6 +171,7 @@ for (country in countries) {
 short_model <- FALSE
 model_size <- ifelse(short_model == FALSE, "long", "short")
 for (outcome_var in outcome_vars) {
+  cli::cli_alert_info(paste0("Creating performance table for model type: ", model_size, ", outcome variable: ", outcome_var))
   for (country in countries) {
     # List all relevant .xlsx files
     if (short_model == TRUE) {
@@ -240,6 +241,7 @@ for (outcome_var in outcome_vars) {
   } else {
     average_performance_df_long_total <<- rbind(average_performance_df_long_total, average_performance_df_long)
   }
+    cli::cli_alert_info(paste0("Creating performance table for model type: ", model_size, ", outcome variable: ", outcome_var, "DONE!"))
 }
 write.xlsx(average_performance_df_long_total, paste0("Tables_Figures/average_performance_table_",model_size,".xlsx"))
 
@@ -318,21 +320,32 @@ write.xlsx(average_performance_df_long_total, paste0("Tables_Figures/average_per
 # VII. Correlation Plot ----
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for (outcome_var in outcome_vars) {
-  do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
-}
+# for (outcome_var in outcome_vars) {
+#   do.call(create_corrplot, list(short_model = TRUE, outcome_var = outcome_var))
+# }
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
 # VIII. Summary stats Tables ----
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-map_types <- c("predicted_census_district", "predicted_dhs_region_long", "predicted_dhs_region_short", "average_dhs_region")
-outcome_vars <- c("insurance", "locationBirth", "postnatalcheck", "visitHF12m")
-for (map_type in map_types) {
-  for (outcome_var in outcome_vars) {
-    do.call(create_summary_stats, list(outcome_var = outcome_var, map_type = map_type))
-  }
+# map_types <- c("predicted_census_district", "predicted_dhs_region_long", "predicted_dhs_region_short", "average_dhs_region")
+# outcome_vars <- c("insurance", "locationBirth", "postnatalcheck", "visitHF12m")
+# for (map_type in map_types) {
+#   for (outcome_var in outcome_vars) {
+#     do.call(create_summary_stats, list(outcome_var = outcome_var, map_type = map_type))
+#   }
+# }
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# IX. Wealth Quintile Plots ----
+#
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+outcome_vars <- c("insurance")
+for (outcome_var in outcome_vars) {
+  do.call(create_wealth_quintile_plots, list(outcome_var = outcome_var, short_model = FALSE))
 }
 
 
