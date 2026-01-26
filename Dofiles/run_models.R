@@ -16,7 +16,6 @@ rm(list = ls())
 
 # Packages
 library(Hmisc)
-library(stargazer)
 library(ROSE)
 library(caret)
 library(ROCR)
@@ -27,8 +26,8 @@ library(dplyr)
 library(haven)
 library(cli)
 library(readxl)
-library(writexl)
 library(openxlsx)
+library(fastDummies)
 
 # Source key functions
 source("Dofiles/dhs_functions.R")
@@ -39,10 +38,10 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
                "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
                "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
                "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
-outcome_vars <- c("visitHF12m")
+outcome_vars <- c("insurance","locationBirth","postnatalcheck","visitHF12m")
 metrics_df <- NA
-outcome_vars_without_insurance <- c("locationBirth","postnatalcheck", "visitHF12m")
-model_list <- c("basic_logit", "lasso", "random_forest", "neural_network", "subset", "xgboost")
+outcome_vars_without_insurance <- c("locationBirth","postnatalcheck","visitHF12m")
+model_list <- c("basic_logit", "subset", "xgboost")
 
 for (outcome_var in outcome_vars) {
   for (country in countries) {
