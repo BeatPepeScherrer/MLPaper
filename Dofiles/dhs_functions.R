@@ -1036,9 +1036,9 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     
     # List the variable importance in descending order
     importance <- as.data.frame(varImp(xgboost_insurance_cv)$importance)
-    importance_xgboost <- importance %>% arrange(desc(importance))
-    names(importance_xgboost) <- "importance_xgboost"
-    importance_xgboost$variables <- rownames(importance_xgboost)
+    shap_importance <- importance %>% arrange(desc(importance))
+    names(shap_importance) <- "shap_importance"
+    shap_importance$variables <- rownames(shap_importance)
     # get shapley values
     shap_values <- xgb.plot.shap(data = as.matrix(train_insurance[,-1]),
                                  features = colnames(train_insurance)[-1],
@@ -1049,8 +1049,8 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     shap_importance <- sort(shap_importance, decreasing = TRUE)
     shap_importance <- as.data.frame(shap_importance)
     shap_importance$variables <- rownames(shap_importance)
-    importance_xgboost <- importance_xgboost %>% dplyr::left_join(shap_importance, by = "variables")
-    importance_df <- importance_df %>% dplyr::left_join(as.data.frame(importance_xgboost), by = "variables")
+    shap_importance <- shap_importance %>% dplyr::left_join(shap_importance, by = "variables")
+    importance_df <- importance_df %>% dplyr::left_join(as.data.frame(shap_importance), by = "variables")
     
     # Create df with most important performance metrics
     metrics_xgboost1 <- as.data.frame(cm_xgboost_insurance_cv$overall)
@@ -1081,7 +1081,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     
     # List of variables of interest
     vars <- c(outcome_var, "married", "currently_working", 
-              "rural", "smokes", "media_HH", 
+              "rural", "smokes", "media", 
               "female_HH_head")
     
     # Select only the available variables in the dataframe
@@ -1269,7 +1269,7 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
     importance_df <- do.call(rbind, importance_df)
     importance_df <- importance_df %>%
       dplyr::select(all_of("Country"), everything())
-    if (length(importance_df_merged) <= 1) {
+    if (country == first(countries)) {
       importance_df_merged <- importance_df
     } else {
       importance_df_merged <- rbind(importance_df_merged, importance_df)
@@ -1338,7 +1338,7 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
                                                                                             "age_cat_45_49", "age_cat_50_54", "age_cat_55_59", "age_cat_59",
                                                                                             "age_HH_head_cat_0_14", "age_HH_head_cat_59", "education_HH_tertiary_edu",
                                                                                             "age_cat_0_14"),
-                              variables, paste0(variables, "*")))
+                              paste0(variables, "*"), variables))
   
   # General renaming
   importance_df_merged <- importance_df_merged %>%
@@ -1348,12 +1348,12 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
   # Create separate dfs
   z_score <- qnorm(1 - 0.05 / 2)
   if (short_model == FALSE) {
-    model_title <- ifelse(model == "importance_xgboost", "ML Model",
+    model_title <- ifelse(model == "shap_importance", "ML Model",
                           ifelse(model == "importance_subset", "Classical Model", "Logit with full set of variables"))
     negative_str <- ifelse(model == "importance_subset", "Negative_subset",
                            ifelse(model == "importance_general", "Negative_general", "Negative_xgboost"))
   } else {
-    model_title <- ifelse(model == "importance_xgboost", "ML Model", "Classical Model")
+    model_title <- ifelse(model == "shap_importance", "ML Model", "Classical Model")
     negative_str <- ifelse(model == "importance_general", "Negative_general", "Negative_xgboost")
   }
   
@@ -1362,6 +1362,67 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
     filter(!is.na(get(model)))
   # Rename negative dummy 
   colnames(importance_general_df)[4] <- "Negative"
+  
+  #Create top 5 appendix table
+  importance_top5_df <- importance_general_df %>%
+    dplyr::group_by(Country) %>%
+    dplyr::arrange(desc(shap_importance)) %>%
+    dplyr::slice_head(n = 5) %>%
+    mutate(index = row_number()) %>%
+    ungroup()
+  importance_top5_df$shap_importance <- round(importance_top5_df$shap_importance, digits = 2)
+  
+  importance_top5_df_wide <- importance_top5_df %>%
+    pivot_wider(
+    id_cols    = Country,
+    names_from = index,
+    values_from = c(variables, shap_importance),
+    names_prefix = "country_",
+    names_vary = "slowest" 
+    ) 
+  
+  # Optional: make prettier column labels
+  importance_top5_df_wide <- importance_top5_df_wide %>%
+    rename(
+      `Predictor1`        = variables_country_1,
+      `Variable Importance1`      = shap_importance_country_1,
+      `Predictor2`        = variables_country_2,
+      `Variable Importance2`      = shap_importance_country_2,
+      `Predictor3`        = variables_country_3,
+      `Variable Importance3`      = shap_importance_country_3,
+      `Predictor4`        = variables_country_4,
+      `Variable Importance4`      = shap_importance_country_4,
+      `Predictor5`        = variables_country_5,
+      `Variable Importance5`      = shap_importance_country_5
+    )
+  
+  ft <- flextable(importance_top5_df_wide)
+  
+  #--- Add the "Top #1 ... Top #5" multi-row header like in your Word table ----
+  
+  ft <- add_header_row(
+    ft,
+    values   = c("Country", "Top #1", "Top #2", "Top #3", "Top #4", "Top #5"),
+    colwidths = c(1, 2, 2, 2, 2, 2)   # each 'Top #' spans Variable + Importance
+  )
+  
+  # Style the header
+  ft <- merge_h(ft, part = "header")            # merge the Top # cells
+  ft <- align(ft, part = "header", align = "center")
+  ft <- bold(ft, part = "header")
+  ft <- valign(ft, part = "header", valign = "center")
+  
+  # Borders & general look (you can tweak these)
+  ft <- border_outer(ft, border = fp_border())
+  ft <- border_inner_h(ft, border = fp_border())
+  ft <- border_inner_v(ft, border = fp_border())
+  ft <- autofit(ft)
+  
+  #--- Export to Word -----------------------------------------------------------
+  
+  doc <- read_docx()
+  doc <- body_add_flextable(doc, ft)
+  print(doc, target = paste0("word_tables/top5_predictors_table_",outcome_var,".docx"))
   
   if (rank == TRUE) {
     importance_general_df <- importance_general_df %>% 
@@ -1411,7 +1472,7 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
       guides(fill = "none")
     
     # Add conditional fill scale based on model type
-    if (model == "importance_xgboost") {
+    if (model == "shap_importance") {
       imp_plot <- imp_plot + scale_fill_grey(start = 0.25, end = 0.5)
     } else {
       imp_plot <- imp_plot + scale_fill_grey(start = 0.5, end = 0.75)
@@ -1464,7 +1525,7 @@ create_boxplots <- function(outcome_var, short_model = FALSE) {
     performance_df$Country <- country
     performance_df <- performance_df %>%
       dplyr::select(all_of("Country"), everything())
-    if (length(performance_df_merged) <= 1) {
+    if (country == first(countries)) {
       performance_df_merged <- performance_df
     } else {
       performance_df_merged <- rbind(performance_df_merged, performance_df)
@@ -1780,24 +1841,25 @@ create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
 # Create function to make the out-of-sample predictions and create district- and region-level maps
 make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = "all") {
   file_names <- list.files(path = "DataRaw/IPUMS/", full.names = TRUE)
-  # countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
-  #                "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
-  #                "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
-  #                "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
-  #                "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
-  countries <- c("Lesotho", "South.Africa")
+countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+                 "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
+                 "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
+                 "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
+                 "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+
   # 0. SETUP -----
   # read in GADM data for Lesotho
-  mADM_ls <- vect("DataRaw/GADM/gadm41_LSO_1_pk.rds")
-  mADM_ls_df <- as.data.frame(mADM_ls)
-  mADM_ls_df <- mADM_ls_df %>% dplyr::select(c(GID_0, GID_1, COUNTRY, NAME_1))
-  mADM_ls_df <- mADM_ls_df %>% rename(NAME_0 = "COUNTRY")
+  mADM_ls <- sf::st_read("DataRaw/GADM/gadm41_LSO.gpkg", layer = "ADM_ADM_1")
+  mADM_ls_df <- mADM_ls %>% dplyr::select(c(GID_0, GID_1, COUNTRY, NAME_1, geom))
+  mADM_ls_df <- mADM_ls_df %>% rename(NAME_0 = "COUNTRY",
+                                      geometry = "geom")
+  mADM_ls_df <- st_as_sf(mADM_ls_df) %>% st_transform(4269)
   
   # read in madm data for the rest of the countries
   mADM<- readRDS(file = "DataRaw/GADM/mADM.rds")
-  mADMdata <- st_as_sf(mADM) %>% st_transform(4269)
+  mADM <- st_as_sf(mADM) %>% st_transform(4269)
   # merge lesotho and the rest
-  mADMdata <- dplyr::bind_rows(mADMdata, mADM_ls_df)  
+  mADMdata <- dplyr::bind_rows(mADM, mADM_ls_df)
 
   for (country in countries) {
     country_for_filter <- ifelse(country == "Burkina.Faso", "Burkina Faso", 
@@ -1818,6 +1880,7 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     df_geolocation <- read_dta(geo_path)
 
     # Read in short data set
+    # For census and predicted_short maps, we need to predicted probs from the short model specification
     if (map_type == "predicted_dhs_region_long") {
       load(paste0("final_data/",outcome_var,"/df_final_",outcome_var,"_",country,".RData"))
     } else {
@@ -1842,8 +1905,7 @@ make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = 
     df <- st_as_sf(df, coords = c("LONGNUM", "LATNUM"), crs = 4269)
     
     ## Load world_geolev2 shapefile (not available for Botswana)
-    shp <- mADM
-    shp <- sf::st_as_sf(shp)
+    shp <- mADMdata
     shp <- shp %>% dplyr::filter(NAME_0 == country_for_filter)
     shp <- st_make_valid(shp)
     shp <- shp %>%
