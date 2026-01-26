@@ -194,7 +194,7 @@ recode_list <- list(
   list(old_name = "v743b", new_name = "decides_purchases", true_values = c(1,2), na_values = c(6)), # Person involved in decision on respondent's household purchases
   list(old_name = "v823", new_name = "HIV_witchcraft", true_values = c(1), na_values = c(6)), # Person believes she can get HIV by witchcraft/supernatural means
   list(old_name = "v206", old_name_two = "v207", new_name = "sondaughterdied", true_values = c(1:10)), # Either son or daughter has died
-  # list(old_name = "v202", old_name_two = "v203", new_name = "sondaughterhome", true_values = c(1:10)), # Either son or daughter is still at home
+  list(old_name = "v202", old_name_two = "v203", new_name = "sondaughterhome", true_values = c(1:10)), # Either son or daughter is still at home
   list(old_name = "v326", new_name = "safe_source_contracept", true_values = c(11:25), na_values =c(9)), # safe source of contraceptive method
   list(old_name = "v384a", old_name_two = "v384b", old_name_three = "v384c", new_name = "heard_family_planning", true_values = c(1), na_values =c(9)), # heard of family planning via any media in last few months
   # list(old_name = "m1a_1", old_name_two = "m1_1", new_name = "tetanus", true_values = c(1:7), na_values =c(8,9)), # Has received tetanus injection before birth or pregnancy
@@ -218,7 +218,7 @@ list_scale <- list(
   list(old_name = "hv009", new_name = "member_all_HH"),
   list(old_name = "hv010", new_name = "member_women_HH"),
   list(old_name = "hv011", new_name = "member_men_HH"),
-  list(old_name = "hv014", new_name = "member_child_under_5"),
+  # list(old_name = "hv014", new_name = "member_child_under_5"),
   list(old_name = "hml1", new_name = "mosquitonets_nr"),
   list(old_name = "hv245", new_name = "hectares"),
   list(old_name = "hv246a", new_name = "cattle"),
@@ -233,7 +233,7 @@ list_scale <- list(
 # Call the function to create the final data sets for a given country
 for (outcome_var in outcome_vars) {
   # Define output path
-  output_path <- paste0("L:/research_assistants/Pepe/MLPaper/New_data_sets/",outcome_var,"/")
+  output_path <- paste0("New_data_sets/",outcome_var,"/")
   for (country in countries) {
     # create final data sets for model estimation
     do.call(run_countries, c(country_list[[country]], list(outcome_var = outcome_var, output_path = output_path)))
