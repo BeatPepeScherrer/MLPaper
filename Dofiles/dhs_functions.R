@@ -1129,6 +1129,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     metrics_subset2 <- rename(metrics_subset2 , c("logit_subset_insurance" = "cm_subset_insurance$byClass"))
     metrics_subset <- as.data.frame(rbind(metrics_subset1, metrics_subset2))
     
+        # Append metrics to final metrics file
     if (!is.null(nrow(metrics_df))) {
       metrics_df <- cbind(metrics_df, metrics_subset)
     } else{
@@ -1161,7 +1162,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
   #
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
-  if (!("overview_only" %in% model_list)) {
+    if (!("overview_only" %in% model_list)) {
     
     model_output_name <- paste(model_list, collapse = "_")
     
@@ -1172,12 +1173,34 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     # Put "model_names" as first column
     metrics_df <- metrics_df %>%
       select(all_of("model_names"), everything())
-    # write to .xlsx
+    
+    # Read the existing metrics Excel file
+    # metrics_file_path <- if (short_model == TRUE) {
+    #   paste0("short_model/Boxplots/data_", outcome_var, "/metrics_", model_output_name, "_", country, "_short.xlsx")
+    # } else {
+    #   paste0("Boxplots/data_", outcome_var, "/metrics_", model_output_name, "_", country, ".xlsx")
+    # }
+
     if (short_model == TRUE) {
-      write_xlsx(metrics_df, path = paste0("short_model/Boxplots/data_",outcome_var,"/metrics_",model_output_name,"_",country,"_short.xlsx"))
+      file <- list.files(paste0("short_model/Boxplots/data_", outcome_var), pattern = paste0("metrics.*\\",country,"_short.xlsx$"), full.names = TRUE)
     } else {
-      write_xlsx(metrics_df, path = paste0("Boxplots/data_",outcome_var,"/metrics_",model_output_name,"_",country,".xlsx"))
+      file <- list.files(paste0("Boxplots/data_", outcome_var), pattern = paste0("metrics.*\\",country,".xlsx$"), full.names = TRUE)
     }
+
+    if (file.exists(file)) {
+      existing_metrics <- read.xlsx(file)
+
+      # Merge the new metrics with the existing ones
+      for (col_name in colnames(metrics_df)) {
+        existing_metrics[[col_name]] <- metrics_df[[col_name]]
+      }
+
+      metrics_df <- existing_metrics
+    }
+
+    # Write the updated metrics back to the Excel file
+    write_xlsx(metrics_df, path = file)
+    
     # Importance scores
     if (short_model == TRUE) {
       write_xlsx(importance_df, path = paste0("short_model/Varimp_plots/data_",outcome_var,"/importance_",model_output_name,"_",country,"_short.xlsx"))
@@ -1186,28 +1209,36 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     }
     
     cli::cli_alert_info("Writing output for Model: {model_list}, Country: {country} DONE.")
-    
-    # Create folder for predicted test probabilities if it does not exist and save predicted test probabilities
-    df_final_test_probs <- test_insurance
-    df_final_test_probs$test_prediction_xgboost <- predict_xgboost_insurance_cv[[2]]
-    df_final_test_probs$test_prediction_subset <- predict_subset_insurance
-    if (short_model == TRUE) {
-      save(df_final_test_probs, file = paste0("short_model/test_probabilities/",outcome_var,"/test_probabilities_",country,"_short.RData"))
-    } else {
-      save(df_final_test_probs, file = paste0("test_probabilities/",outcome_var,"/test_probabilities_",country,".RData"))
-    }
-    
-    # Calculate predicted probs, append to df and save df as final_df
-    df_final <- df_insurance
-    predict_xgboost_insurance_cv_full <- predict(xgboost_insurance_cv, df_prediction, type="prob")
-    Perf_xgboost_insurance_cv <- prediction(as.numeric(predict_xgboost_insurance_cv_full[[2]]), as.numeric(df_prediction[[1]]))
-    pred_dummy <-  ifelse(predict_xgboost_insurance_cv_full[[2]]> 0.5 , 1,0)
-    df_final$predicted_class <- pred_dummy
-    df_final$NAME_0 <- country
-    if (short_model == TRUE) {
-      save(df_final, file=paste0("short_model/final_data/",outcome_var,"/df_final_",outcome_var,"_",country,"_short.RData"))
-    } else {
-      save(df_final, file=paste0("final_data/",outcome_var,"/df_final_",outcome_var,"_",country,".RData"))
+
+    if ("xgboost" %in% model_list) {
+        # Create folder for predicted test probabilities if it does not exist
+        if (short_model == TRUE) {
+          dir.create(paste0("short_model/test_probabilities/",outcome_var), showWarnings = FALSE, recursive = TRUE)
+        } else {
+          dir.create(paste0("test_probabilities/",outcome_var), showWarnings = FALSE, recursive = TRUE)
+        }
+      # Create folder for predicted test probabilities if it does not exist and save predicted test probabilities
+      df_final_test_probs <- test_insurance
+      df_final_test_probs$test_prediction_xgboost <- predict_xgboost_insurance_cv[[2]]
+      df_final_test_probs$test_prediction_subset <- predict_subset_insurance
+      if (short_model == TRUE) {
+        save(df_final_test_probs, file = paste0("short_model/test_probabilities/",outcome_var,"/test_probabilities_",country,"_short.RData"))
+      } else {
+        save(df_final_test_probs, file = paste0("test_probabilities/",outcome_var,"/test_probabilities_",country,".RData"))
+      }
+      
+      # Calculate predicted probs, append to df and save df as final_df
+      df_final <- df_insurance
+      predict_xgboost_insurance_cv_full <- predict(xgboost_insurance_cv, df_prediction, type="prob")
+      Perf_xgboost_insurance_cv <- prediction(as.numeric(predict_xgboost_insurance_cv_full[[2]]), as.numeric(df_prediction[[1]]))
+      pred_dummy <-  ifelse(predict_xgboost_insurance_cv_full[[2]]> 0.5 , 1,0)
+      df_final$predicted_class <- pred_dummy
+      df_final$NAME_0 <- country
+      if (short_model == TRUE) {
+        save(df_final, file=paste0("short_model/final_data/",outcome_var,"/df_final_",outcome_var,"_",country,"_short.RData"))
+      } else {
+        save(df_final, file=paste0("final_data/",outcome_var,"/df_final_",outcome_var,"_",country,".RData"))
+      }
     }
   }
 
@@ -1559,7 +1590,7 @@ create_boxplots <- function(outcome_var, short_model = FALSE) {
   }
   
   # Drop general model
-  if (short_model == FALSE) {
+  if (short_model == FALSE & "logit_general_insurance" %in% colnames(performance_df_merged)) {
     performance_df_merged <- performance_df_merged %>% dplyr::select(-c(logit_general_insurance))
   }
   
@@ -1756,7 +1787,7 @@ create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
   }
   
   # Drop general model
-  if (short_model == FALSE) {
+  if (short_model == FALSE & "logit_general_insurance" %in% colnames(performance_df_merged)) {
     performance_df_merged <- performance_df_merged %>% dplyr::select(-c(logit_general_insurance))
   }
   
@@ -2045,6 +2076,7 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
     
     ## Load world_geolev2 shapefile (not available for Botswana)
     shp <- mADMdata
+    shp <- sf::st_as_sf(shp)
     shp <- shp %>% dplyr::filter(NAME_0 == country_for_filter)
     shp <- st_make_valid(shp)
     shp <- shp %>%
@@ -2289,7 +2321,6 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
 
       ## create region averages
       data$average_insurance_region <- ave(as.numeric(data$predicted_class), data$GID_1, FUN= function(x) mean(x, na.rm = TRUE))
-      summary(data$average_insurance_region)
       data$average_insurance_region <- data$average_insurance_region*100
       data_region <- data[!duplicated(data$GID_1), ]
       data_region <- data_region[,c("average_insurance_region", "GID_1")]
@@ -2318,6 +2349,7 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
         max = 100
       }
       
+      ## Map INSURANCE
       map_insurance <- ggplot(data = data_region) + 
         geom_sf(aes(fill = average_insurance_region), 
                 colour = "transparent", size = 0.02) +
@@ -2379,7 +2411,6 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
 
       ## create region averages
       data$average_insurance_region <- ave(as.numeric(data$predicted_class), data$GID_1, FUN= function(x) mean(x, na.rm = TRUE))
-      summary(data$average_insurance_region)
       data$average_insurance_region <- data$average_insurance_region*100
       data_region <- data[!duplicated(data$GID_1), ]
       data_region <- data_region[,c("average_insurance_region", "GID_1")]
@@ -2498,7 +2529,8 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
         min = 50
         max = 100
       }
-      
+
+      ## Map INSURANCE
       map_insurance <- ggplot(data = data_region) + 
         geom_sf(aes(fill = average_insurance_region), 
                 colour = "transparent", size = 0.02) +
@@ -2522,6 +2554,59 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
       cli::cli_alert_info("Creating Average {outcome_var} Coverage DHS map for {country} on regional level DONE.")
     }
   }
+}
+
+arrange_maps <- function(country, country_title) {
+  stopifnot(is.character(country), is.character(country_title))
+
+  outcome_vars <- c("insurance", "visitHF12m", "locationBirth", "postnatalcheck")
+
+  plot_list <- list()
+
+  for (outcome_var in outcome_vars) {
+
+    map_path_avg        <- paste0("Maps/DHS/Average/average_map_", outcome_var, "_DHS_region_", country, ".png")
+    map_path_pred_long  <- paste0("Maps/DHS/predicted_long/map_", outcome_var, "_DHS_region_", country, ".png")
+    map_path_pred_short <- paste0("Maps/DHS/predicted_short/map_", outcome_var, "_DHS_region_", country, ".png")
+    map_path_census     <- paste0("Maps/Census/map_", outcome_var, "_", country, ".png")
+
+    paths <- c(
+      avg = map_path_avg,
+      pred_long = map_path_pred_long,
+      pred_short = map_path_pred_short,
+      census = map_path_census
+    )
+
+    for (map_type in names(paths)) {
+      map_path <- paths[[map_type]]
+
+      if (file.exists(map_path)) {
+        img <- png::readPNG(map_path)
+        g <- grid::rasterGrob(img, interpolate = TRUE)
+
+        plot_list[[paste0(country, "_", outcome_var, "_", map_type)]] <-
+          ggplot2::ggplot() +
+          ggplot2::annotation_custom(g, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+          ggplot2::theme_void()
+      } else {
+        message("Missing: ", map_path)
+      }
+    }
+  }
+
+  combined <- gridExtra::arrangeGrob(
+    grobs = plot_list,
+    nrow = 4, ncol = 4,
+    top = grid::textGrob(paste0("Map Panel: ", country_title),
+    gp = grid::gpar(fontsize = 30)),
+    padding = grid::unit(0, "mm"),
+    heights = rep(1, 4),  # Equal heights for rows
+    widths = rep(1, 4)    # Equal widths for columns
+  )
+  out_path <- paste0("Maps/Arranged/combined_map_", country_title, ".png")
+  ggsave(out_path, combined, width = 20, height = 15, dpi = 300)
+
+  invisible(out_path)
 }
 
 # Function for creating summary stats table
@@ -2759,4 +2844,3 @@ plain_ascii<-function(x) {
   }
   return(x)
 }
-
