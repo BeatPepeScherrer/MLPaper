@@ -349,3 +349,53 @@ for (outcome_var in outcome_vars) {
 }
 
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# X. Arrange maps ----
+#
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+                 "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
+                 "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
+                 "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
+                 "Sierra.Leone", "Tanzania", "Togo", "Uganda", "Zambia", "Zimbabwe")
+
+country_title_list <- list(
+  Burkina.Faso = "Burkina Faso",
+  Benin = "Benin",
+  Burundi = "Burundi",
+  Cameroon = "Cameroon",
+  DRC = "DRC",
+  Republic.of.the.Congo = "Republic of the Congo",
+  Cote.dIvoire = "Côte d'Ivoire",
+  Eswatini = "Eswatini",
+  Ethiopia = "Ethiopia",
+  The.Gambia = "The Gambia",
+  Ghana = "Ghana",
+  Guinea = "Guinea",
+  Kenya = "Kenya",
+  Liberia = "Liberia",
+  Lesotho = "Lesotho",
+  Madagascar = "Madagascar",
+  Mauritania = "Mauritania",
+  Mali = "Mali",
+  Malawi = "Malawi",
+  Nigeria = "Nigeria",
+  Niger = "Niger",
+  Namibia = "Namibia",
+  Rwanda = "Rwanda",
+  South.Africa = "South Africa",
+  Sierra.Leone = "Sierra Leone",
+  Senegal = "Senegal",
+  Chad = "Chad",
+  Togo = "Togo",
+  Tanzania = "Tanzania",
+  Uganda = "Uganda",
+  Zambia = "Zambia",
+  Zimbabwe = "Zimbabwe"
+)
+
+for (country in countries) {
+  country_title <- country_title_list[[country]]
+  do.call(arrange_maps, list(country = country, country_title = country_title))
+}
