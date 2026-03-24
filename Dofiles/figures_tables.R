@@ -28,6 +28,8 @@ path_importance_short <- "short_model/varimp_plots/data"
 
 outcome_vars <- c("insurance","locationBirth","postnatalcheck", "visitHF12m")
 
+short_model <- FALSE
+
 countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
                "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
                "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
@@ -252,8 +254,7 @@ models <- c("importance_subset", "importance_general", "shap_importance")
 # VI. Performance Table (appendix, all models) ----
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-short_model <- FALSE
-for (outcome_var in c("insurance", "locationBirth", "postnatalcheck")) {
+for (outcome_var in outcome_vars) {
   for (country in countries) {
     # List all relevant .xlsx files
     file <- list.files(paste0(path_boxplots,"_",outcome_var), pattern = paste0("metrics.*\\",country,".xlsx$"), full.names = TRUE)
