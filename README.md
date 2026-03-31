@@ -14,6 +14,54 @@ This repository contains the code and resources for the ML-Paper project, which 
 -   **short_model_mapping.R**: Script for creating all maps.
 -   **Old_files/**: Contains archived scripts and older versions of the project files.
 
+## Pipeline and Output Locations
+Use `Dofiles/main.R` as the entrypoint and uncomment only the steps you want to run.
+
+### 1) Data preparation
+- Script: `Dofiles/run_countries.R`
+- Main outputs:
+  - `New_data_sets/<outcome>/<country>.RData`
+  - `New_data_sets/<outcome>/<country>_summary_stats.xlsx`
+
+### 2) Model training and prediction artifacts
+- Script: `Dofiles/run_models.R` (uses functions in `Dofiles/dhs_functions.R`)
+- Main outputs:
+  - `final_data/<outcome>/df_final_<outcome>_<country>.RData`
+  - `test_probabilities/<outcome>/test_probabilities_<country>.RData`
+  - `merged_overview_<outcome>.xlsx`
+  - `merged_importance_<outcome>.xlsx`
+  - `merged_importance_rank_<outcome>.xlsx`
+- Short model variants are written to matching paths under `short_model/`.
+
+### 3) Figures and paper tables
+- Script: `Dofiles/figures_tables.R`
+- Main outputs:
+  - Plots:
+    - `Boxplots/`
+    - `Scatterplots/`
+    - `Varimp_plots/`
+    - `Maps/` (if map steps are called)
+  - Tables:
+    - `Tables_Figures/average_performance_table_long.xlsx`
+    - `Tables_Figures/average_performance_table_short.xlsx`
+    - `Tables_Figures/average_performance_table_appendix.xlsx`
+    - `Tables_Figures/summary_stats_by_district/...` (for summary-stat steps)
+
+### 4) Maps
+- Script: `Dofiles/short_model_mapping.R` (map functions in `Dofiles/dhs_functions.R`)
+- Main outputs:
+  - `Maps/Census/`
+  - `Maps/DHS/predicted_long/`
+  - `Maps/DHS/predicted_short/`
+  - `Maps/DHS/Average/`
+
+### Quick output orientation
+- `New_data_sets/`: cleaned/model-ready country-level datasets
+- `final_data/` and `test_probabilities/`: model-ready matrices and test predictions
+- `Boxplots/`, `Scatterplots/`, `Varimp_plots/`, `Maps/`: figures
+- `Tables_Figures/`: paper tables and exported summary outputs
+- `short_model/`: mirror outputs for short-model runs
+
 ## Key Features
 - Preprocessing and merging of DHS data.
 - Implementation of machine learning models, including XGBoost.
