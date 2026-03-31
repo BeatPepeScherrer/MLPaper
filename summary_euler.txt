@@ -1,6 +1,13 @@
 Find infos on: https://scicomp.ethz.ch/wiki/Getting_started_with_clusters
 
 0.) Initialize connection:
+a) If you work with VSCode:
+1. Click on Bottom left button ("Open a remote window") 
+2. Click "Connect to host"
+3. Enter your Euler url "username@euler.ethz.ch"
+4. Enter your PW
+
+b) If you dont work with VSCode
 Setup: MobaXterm:
 Open MobaXterm as Administrator (get spadmin from ETH IT) and open "Session". Go on "SSH". 
 Type for Remote host: "euler.ethz.ch". 

@@ -582,9 +582,9 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
   # Define repeated CV
   train_control <- 
     trainControl(method="repeatedcv",
-                 number=5,
-                 repeats=20,
-                savePredictions="final")  
+    number=5,
+    repeats=20,
+    savePredictions="final")
 
   cli::cli_alert_info("Prepare Data for Train and Test for country: {country}. DONE")
   
@@ -972,22 +972,22 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     set.seed(1)
     # Define grid
     tune_space <- expand.grid(
-      nrounds = c(200, 400, 800),
-      max_depth = c(4, 5, 6),
-      eta = c(0.03, 0.06, 0.1),
-      gamma = c(0, 0.05, 0.1),
-      colsample_bytree = c(0.6, 0.8, 1.0),
-      subsample = c(0.6, 0.8, 1.0),
-      min_child_weight = c(0, 1, 3)
-    )                      
+  nrounds = c(200, 400, 800),
+  max_depth = c(4, 5, 6),
+  eta = c(0.03, 0.06, 0.1),
+  gamma = c(0, 0.05, 0.1),
+  colsample_bytree = c(0.6, 0.8, 1.0),
+  subsample = c(0.6, 0.8, 1.0),
+  min_child_weight = c(0, 1, 3)
+)                 
     
     n_samples <- 25
     tune_grid <- tune_space[sample(nrow(tune_space), n_samples), ]
-    
+
     y_fac <- factor(train_dummy_y._insurance, levels = c(0,1))
-    
+
     cli::cli_alert_info("test1")
-    
+
     # Track time
     start_time <- Sys.time()
     
@@ -1002,11 +1002,11 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
       verbose = FALSE
     )
     xgb_tune$bestTune
-    
+
     cli::cli_alert_info("Test2")
-    
+
     final_grid <- xgb_tune$bestTune
-    
+
     # Run XGBoost model with tuned Hyperparameters
     xgboost_insurance_cv <- caret::train(
       form = formula_model,
@@ -1022,7 +1022,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     end_time <- Sys.time()
     # Calculate elapsed time
     elapsed_time <- difftime(end_time, start_time, units = "mins")
-    
+
     # Produce performance metrics for later plotting
     predict_xgboost_insurance_cv <- predict(xgboost_insurance_cv,test_insurance, type="prob") 
     Perf_xgboost_insurance_cv <- prediction(as.numeric(predict_xgboost_insurance_cv[[2]]), as.numeric(test_insurance[[outcome_var]]))
@@ -1033,7 +1033,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     # Create confusion matrix
     pred_dummy <-  ifelse(predict_xgboost_insurance_cv[[2]]> 0.5 , 1,0)
     cm_xgboost_insurance_cv <- confusionMatrix(as.factor(pred_dummy),as.factor(test_insurance[[outcome_var]]), positive = "1") 
-    
+
     # List the variable importance in descending order
     importance <- as.data.frame(varImp(xgboost_insurance_cv)$importance)
     shap_importance <- importance %>% arrange(desc(importance))
@@ -1044,14 +1044,14 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
                                  features = colnames(train_insurance)[-1],
                                  model = xgboost_insurance_cv$finalModel,
                                  top_n = NULL,
-                                 plot = FALSE)    
+                                 plot = FALSE)
     shap_importance <- colMeans(abs(shap_values$shap_contrib))
     shap_importance <- sort(shap_importance, decreasing = TRUE)
     shap_importance <- as.data.frame(shap_importance)
     shap_importance$variables <- rownames(shap_importance)
     shap_importance <- shap_importance %>% dplyr::left_join(shap_importance, by = "variables")
     importance_df <- importance_df %>% dplyr::left_join(as.data.frame(shap_importance), by = "variables")
-    
+
     # Create df with most important performance metrics
     metrics_xgboost1 <- as.data.frame(cm_xgboost_insurance_cv$overall)
     metrics_xgboost2 <- as.data.frame(cm_xgboost_insurance_cv$byClass)
@@ -1065,7 +1065,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     } else{
       metrics_df <- metrics_xgboost
     }
-    
+
     
     cli::cli_alert_info("Training Model: {model_name} DONE. Time taken: {elapsed_time} minutes.")
   }
@@ -1088,7 +1088,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     df_prediction_subset <- df_prediction %>%
       dplyr::select(any_of(vars), contains("age_cat"), contains("education"), 
                     contains("wealthindex"), contains("age_HH_head_cat"))
-    
+
     set.seed(1)   # set the seed to make it reproducible
     smp_size_insurance <- floor(0.66 * nrow(df_prediction_subset)) # use 1/3 and 2/3 split
     train_ind_insurance <- sample(seq_len(nrow(df_prediction_subset)), size = smp_size_insurance)
@@ -1129,7 +1129,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
     metrics_subset2 <- rename(metrics_subset2 , c("logit_subset_insurance" = "cm_subset_insurance$byClass"))
     metrics_subset <- as.data.frame(rbind(metrics_subset1, metrics_subset2))
     
-        # Append metrics to final metrics file
+    # Append metrics to final metrics file
     if (!is.null(nrow(metrics_df))) {
       metrics_df <- cbind(metrics_df, metrics_subset)
     } else{
@@ -1162,7 +1162,7 @@ run_models <- function(country, model_list, outcome_var, short_model = FALSE) {
   #
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
-    if (!("overview_only" %in% model_list)) {
+  if (!("overview_only" %in% model_list)) {
     
     model_output_name <- paste(model_list, collapse = "_")
     
@@ -1419,7 +1419,7 @@ create_importance_plot <- function(path = path_importance, model = model, rank =
     filter(!is.na(get(model)))
   # Rename negative dummy 
   colnames(importance_general_df)[4] <- "Negative"
-  
+
   #Create top 5 appendix table
   importance_top5_df <- importance_general_df %>%
     dplyr::group_by(Country) %>%
@@ -1846,7 +1846,7 @@ create_scatterplots <- function(outcome_var, metric, short_model = FALSE) {
 
 # Function to create variable importance data table
 create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
-    cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var}...")
+  cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var}...")
   merged_importance <- NA
   importance_path <- paste0("Varimp_plots/data_",outcome_var)
   importance_path_short <- paste0("short_model/Varimp_plots/data_",outcome_var)
@@ -1912,12 +1912,12 @@ create_varimp_data_table <- function(outcome_var, short_model = FALSE) {
   } else {
     write.xlsx(merged_importance_rank, paste0("merged_importance_rank_",outcome_var,".xlsx"))
   }
-    cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var} DONE!")
+  cli::cli_alert_info("Creating variable importance data table for outcome {outcome_var} DONE!")
 }
 
 # Function to create correlation plots, one for whole inputted set and another for only top correlated ones
 create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
-    cli::cli_alert_info("Creating correlation plot for outcome {outcome_var}...")
+  cli::cli_alert_info("Creating correlation plot for outcome {outcome_var}...")
   # Create a full dataset with all countries
   if (short_model == FALSE) {
     input_path <- paste0("New_data_sets/", outcome_var,"/")
@@ -2011,7 +2011,7 @@ create_corrplot <- function(short_model = FALSE, outcome_var = outcome_var) {
 # Create function to make the out-of-sample predictions and create district- and region-level maps
 make_OOB_predictions_and_maps <- function(outcome_var = outcome_var, map_type = "all") {
   file_names <- list.files(path = "DataRaw/IPUMS/", full.names = TRUE)
-countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
+  countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
                  "DRC","Republic.of.the.Congo","Cote.dIvoire","Eswatini","Ethiopia","The.Gambia",
                  "Ghana","Guinea","Kenya","Lesotho","Liberia","Madagascar", "Malawi",
                  "Mali", "Mauritania", "Namibia", "Niger", "Nigeria", "Rwanda", "Senegal","South.Africa",
@@ -2081,7 +2081,6 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
     shp <- st_make_valid(shp)
     shp <- shp %>%
       dplyr::mutate(id = row_number())
-    
     # overlay DHS and mADM for each country separately - otherwise it crashes
     if (!(country_for_filter %in% mADMdata$NAME_0)) {
       cli::cli_alert_danger("Skipping for country {country}, no madmdata found")
@@ -2132,13 +2131,13 @@ countries <- c("Benin","Burkina.Faso","Burundi","Cameroon", "Chad",
         train_ind_insurance <- sample(seq_len(nrow(df_final)), size = smp_size_insurance)
         train_insurance <- df_final[train_ind_insurance, ]
         test_insurance <- df_final[-train_ind_insurance, ]
-        
+
         formula_str <- sprintf("as.factor(%s) ~ .", outcome_var)
         formula_model <- as.formula(formula_str)
         # Drop vars with less than 2 levels
         train_insurance <- train_insurance %>%
           select_if(~ length(unique(.)) >= 2)
- 
+
         ## model
         # set parameters for models
         train_control <- trainControl(method="repeatedcv", number = 5, repeats = 20, savePredictions="final")
@@ -2696,7 +2695,7 @@ create_summary_stats <- function(outcome_var = outcome_var, map_type = map_type)
       cli::cli_alert_danger("Skipping for country {country}, no geodata (ipums) found")
       next
     }
-  
+
     # Read in short data set
     if (map_type == "predicted_dhs_region_long") {
       load(paste0("final_data/",outcome_var,"/df_final_",outcome_var,"_",country,".RData"))
@@ -2826,7 +2825,7 @@ create_summary_stats <- function(outcome_var = outcome_var, map_type = map_type)
       # write summary stats table
       write.xlsx(summary_stats_coverage_district_merged, paste0(wd, "/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_district_",outcome_var,".xlsx"))
       write.xlsx(summary_stats_coverage_region_merged, paste0(wd, "/Tables_Figures/summary_stats_by_district/",map_type,"/summary_stats_region_",outcome_var,".xlsx"))
-        }
+    }
   }
   cli::cli_alert_info("creating summary stats table for outcome {outcome_var} and map type {map_type} DONE!")
 }
