@@ -6,3 +6,6 @@
 DataRaw
 *.xlsx
 *.png
+Data/
+DataRaw/
+

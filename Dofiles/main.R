@@ -34,4 +34,4 @@ source("Dofiles/dhs_functions.R")
 source("Dofiles/figures_tables.R")
 
 # # 7. Create Maps with out-of-sample predictions, regional- and district-level ----
-# source("Dofiles/short_model_mapping.R")
+source("Dofiles/short_model_mapping.R")
